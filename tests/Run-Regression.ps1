@@ -249,7 +249,7 @@ Add-Check 'Admin persistence test exists' {
             throw "Admin persistence test must cover $required."
         }
     }
-    foreach ($required in @('modStateSource', 'RecoveredA', 'WorkshopItems=111;222')) {
+    foreach ($required in @('modStateSource', 'modDiagnostics', '/api/mods/repair', 'RecoveredA', 'WorkshopItems=111;222', '127.0.0.1:18787')) {
         if ($test -notmatch [regex]::Escape($required)) {
             throw "Admin persistence test must cover recovered mod state: $required."
         }
@@ -273,12 +273,12 @@ Add-Check 'Admin UI explains status and risky actions' {
     $appJs = Get-Content -LiteralPath (Join-Path $projectRoot 'tools/admin-panel/public/app.js') -Raw
     $styles = Get-Content -LiteralPath (Join-Path $projectRoot 'tools/admin-panel/public/styles.css') -Raw
 
-    foreach ($required in @('nextStepPanel', 'statusMeaning', 'joinInfo', 'guidance-panel', 'Advanced Actions')) {
+    foreach ($required in @('nextStepPanel', 'statusMeaning', 'joinInfo', 'guidance-panel', 'Advanced Actions', 'modRecoveryPanel', 'Repair From server.ini', 'Restart Admin Panel')) {
         if ($index -notmatch [regex]::Escape($required)) {
             throw "Admin UI must include $required."
         }
     }
-    foreach ($required in @('renderNextStep', 'actionConfirmations', 'Apply config + restart', 'Server is starting')) {
+    foreach ($required in @('renderNextStep', 'renderModRecoveryPanel', 'actionConfirmations', 'Apply config + restart', 'Server is starting', '/api/mods/repair')) {
         if ($appJs -notmatch [regex]::Escape($required)) {
             throw "Admin frontend must include explanatory behavior for $required."
         }
@@ -371,12 +371,7 @@ Add-Check 'Apache license metadata is present' {
 }
 
 Add-Check 'Config secrets are ignored' {
-    if ($null -eq (Get-Command git -ErrorAction SilentlyContinue)) {
-        throw 'git is required for this check.'
-    }
-
-    $gitRoot = & git rev-parse --show-toplevel 2>$null
-    if ($LASTEXITCODE -eq 0 -and $gitRoot) {
+    if ((Test-Path -LiteralPath (Join-Path $projectRoot '.git')) -and $null -ne (Get-Command git -ErrorAction SilentlyContinue)) {
         $ignored = & git check-ignore config/server.env config/mods.json
         if ($ignored -notcontains 'config/server.env' -or $ignored -notcontains 'config/mods.json') {
             throw 'config/server.env and config/mods.json must be ignored.'

@@ -431,12 +431,14 @@ function readModState() {
 function modStateFromIni(iniValues) {
   const workshopIds = splitModIds(iniValues.WorkshopItems || '');
   const modIds = splitModIds(iniValues.Mods || '');
-  const max = Math.max(workshopIds.length, modIds.length);
+  const hasWorkshopIds = workshopIds.length > 0;
+  const pairedModIds = hasWorkshopIds && modIds.length === workshopIds.length ? modIds : [];
+  const max = hasWorkshopIds ? workshopIds.length : modIds.length;
   const entries = [];
 
   for (let index = 0; index < max; index++) {
     const workshopId = workshopIds[index] || '';
-    const modId = modIds[index] || '';
+    const modId = hasWorkshopIds ? (pairedModIds[index] || '') : (modIds[index] || '');
     entries.push({
       name: modId || workshopId || `Imported mod ${index + 1}`,
       workshopId,
@@ -462,14 +464,43 @@ function effectiveModState() {
   const iniState = modStateFromIni(ini);
 
   if (stored.entries.length === 0 && iniState.entries.length > 0) {
+    writeMods(iniState.entries, iniState.modLoadOrder);
     return iniState;
   }
 
   if (stored.modLoadOrder.length === 0 && iniState.modLoadOrder.length > 0) {
-    return { ...stored, modLoadOrder: iniState.modLoadOrder, recoveredFromIni: false };
+    writeMods(stored.entries, iniState.modLoadOrder);
+    return { ...stored, modLoadOrder: iniState.modLoadOrder, recoveredFromIni: true };
   }
 
   return { ...stored, recoveredFromIni: false };
+}
+
+function modDiagnostics() {
+  const stored = readModState();
+  const ini = readIni(serverIniPath()).values;
+  const iniState = modStateFromIni(ini);
+  return {
+    storedEntryCount: stored.entries.length,
+    storedLoadOrderCount: stored.modLoadOrder.length,
+    iniWorkshopCount: splitModIds(ini.WorkshopItems || '').length,
+    iniLoadOrderCount: splitModIds(ini.Mods || '').length,
+    recoverableFromIni: iniState.entries.length > 0,
+    needsEntryRepair: stored.entries.length === 0 && iniState.entries.length > 0,
+    needsLoadOrderRepair: stored.modLoadOrder.length === 0 && iniState.modLoadOrder.length > 0,
+    modsPath,
+    iniPath: serverIniPath()
+  };
+}
+
+function repairModsFromIni() {
+  const ini = readIni(serverIniPath()).values;
+  const iniState = modStateFromIni(ini);
+  if (iniState.entries.length === 0) {
+    throw new Error('No WorkshopItems or Mods were found in the active server.ini.');
+  }
+  writeMods(iniState.entries, iniState.modLoadOrder);
+  return effectiveModState();
 }
 
 function writeMods(mods, modLoadOrder = []) {
@@ -827,6 +858,22 @@ function modPreflight() {
   };
 }
 
+function restartAdminPanel() {
+  setTimeout(() => {
+    server.close(() => {
+      const child = spawn(process.execPath, [__filename, String(defaultPort)], {
+        cwd: __dirname,
+        detached: true,
+        env: { ...process.env, PZ_ADMIN_PANEL_PORT: String(defaultPort) },
+        stdio: 'ignore',
+        windowsHide: true
+      });
+      child.unref();
+      process.exit(0);
+    });
+  }, 250);
+}
+
 function configFilesPayload() {
   const iniPath = serverIniPath();
   const sandboxPath = sandboxVarsPath();
@@ -928,6 +975,7 @@ async function route(req, res) {
         mods: modState.entries,
         modLoadOrder: modState.modLoadOrder.length > 0 ? modState.modLoadOrder : splitModIds(ini.Mods || ''),
         modStateSource: modState.recoveredFromIni ? 'server.ini' : 'mods.json',
+        modDiagnostics: modDiagnostics(),
         health,
         preflight: modPreflight(),
         status,
@@ -1018,6 +1066,19 @@ async function route(req, res) {
       return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/api/mods/repair') {
+      const modState = repairModsFromIni();
+      sendJson(res, 200, {
+        ok: true,
+        mods: modState.entries,
+        modLoadOrder: modState.modLoadOrder,
+        modStateSource: modState.recoveredFromIni ? 'server.ini' : 'mods.json',
+        modDiagnostics: modDiagnostics(),
+        settings: readIni(serverIniPath()).values
+      });
+      return;
+    }
+
     if (req.method === 'POST' && url.pathname === '/api/mods/check') {
       const mods = await checkModsForUpdates();
       sendJson(res, 200, { ok: true, mods });
@@ -1031,6 +1092,11 @@ async function route(req, res) {
         setTimeout(() => {
           server.close(() => process.exit(0));
         }, 250);
+        return;
+      }
+      if (body.action === 'restartPanel') {
+        sendJson(res, 200, { ok: true, message: 'Admin panel restarting. Refresh this page in a few seconds.' });
+        restartAdminPanel();
         return;
       }
       if (body.action === 'restoreBackup') {

@@ -1,5 +1,5 @@
 param(
-    [string]$BaseUrl = 'http://127.0.0.1:8787',
+    [string]$BaseUrl = 'http://127.0.0.1:18787',
     [switch]$StartPanel
 )
 
@@ -56,6 +56,10 @@ function Stop-AdminPanelApi {
 New-Item -ItemType Directory -Path $backupRoot -Force | Out-Null
 
 try {
+    if (-not $StartPanel -and $BaseUrl -eq 'http://127.0.0.1:18787') {
+        throw 'Refusing to run persistence tests against the default admin panel URL unless -StartPanel owns the test server.'
+    }
+
     if (Test-Path -LiteralPath $envPath) {
         Copy-Item -LiteralPath $envPath -Destination (Join-Path $backupRoot 'server.env') -Force
     }
@@ -209,12 +213,57 @@ Mods=RecoveredA;RecoveredB
 "@
 
     $state = Invoke-JsonApi -Path '/api/state'
+    if ($null -eq $state.modDiagnostics -or $state.modDiagnostics.iniWorkshopCount -ne 2) {
+        throw 'API did not expose mod diagnostics from server.ini.'
+    }
     if ($state.modStateSource -ne 'server.ini') {
         throw 'API did not report server.ini as recovered mod source.'
     }
     if (@($state.mods).Count -ne 2 -or $state.mods[0].workshopId -ne '111' -or $state.mods[0].modId -ne 'RecoveredA') {
         throw 'API did not recover mod rows from server.ini.'
     }
+    $recoveredMods = Get-Content -LiteralPath $modsPath -Raw | ConvertFrom-Json
+    if (@($recoveredMods.entries).Count -ne 2 -or $recoveredMods.entries[0].workshopId -ne '111') {
+        throw 'API did not persist recovered server.ini mods back to mods.json.'
+    }
+
+    Set-Content -LiteralPath $modsPath -Encoding ASCII -Value @"
+{
+  "entries": [],
+  "modLoadOrder": ["StaleLoadOrder"]
+}
+"@
+    Set-Content -LiteralPath (Join-Path $serverConfigDir "${serverName}.ini") -Encoding ASCII -Value @"
+PublicName=Recovered Name
+WorkshopItems=333;444
+Mods=333;444;RealLoadOrderA;RealLoadOrderB
+"@
+
+    $state = Invoke-JsonApi -Path '/api/state'
+    if (@($state.mods).Count -ne 2 -or $state.mods[0].workshopId -ne '333' -or $state.mods[0].modId) {
+        throw 'API did not repair empty persisted mods.json from server.ini WorkshopItems.'
+    }
+    $repairedMods = Get-Content -LiteralPath $modsPath -Raw | ConvertFrom-Json
+    if (@($repairedMods.entries).Count -ne 2 -or $repairedMods.entries[1].workshopId -ne '444') {
+        throw 'API did not persist repaired empty mods.json rows.'
+    }
+
+    Set-Content -LiteralPath $modsPath -Encoding ASCII -Value @"
+{
+  "entries": [],
+  "modLoadOrder": []
+}
+"@
+    $repairResult = Invoke-JsonApi -Path '/api/mods/repair' -Method 'POST' -Body @{}
+    if (-not $repairResult.ok -or @($repairResult.mods).Count -ne 2 -or $repairResult.modDiagnostics.storedEntryCount -ne 2) {
+        throw 'Repair endpoint did not rebuild mods.json from server.ini.'
+    }
+
+    Set-Content -LiteralPath (Join-Path $serverConfigDir "${serverName}.ini") -Encoding ASCII -Value @"
+PublicName=Recovered Name
+WorkshopItems=111;222
+Mods=RecoveredA;RecoveredB
+"@
 
     Invoke-JsonApi -Path '/api/mods' -Method 'POST' -Body @{
         mods = @()

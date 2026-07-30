@@ -4,6 +4,7 @@ const state = {
   mods: [],
   modLoadOrder: [],
   modStateSource: '',
+  modDiagnostics: {},
   health: {},
   preflight: {},
   backups: [],
@@ -47,6 +48,7 @@ const actionLabels = {
   enableAutomation: 'Enable automation',
   disableAutomation: 'Disable automation',
   shutdownPanel: 'Close admin panel',
+  restartPanel: 'Restart admin panel',
   installFirewallRules: 'Install firewall rules',
   applyConfig: 'Apply config',
   applyConfigRestart: 'Apply config + restart',
@@ -65,7 +67,8 @@ const actionConfirmations = {
   installFirewallRules: 'Install Windows Firewall rules now? This requires Administrator permission.',
   enableAutomation: 'Enable scheduled background tasks for startup, watchdog, restart, and updates?',
   disableAutomation: 'Disable scheduled background tasks? This does not stop the running server.',
-  shutdownPanel: 'Close only the admin panel? The Project Zomboid server will keep running.'
+  shutdownPanel: 'Close only the admin panel? The Project Zomboid server will keep running.',
+  restartPanel: 'Restart only the admin panel? The Project Zomboid server will keep running.'
 };
 
 function $(selector) {
@@ -346,9 +349,7 @@ function renderMods() {
   $('#modHealth').textContent = needsUpdate > 0
     ? `${needsUpdate} enabled mod${needsUpdate === 1 ? '' : 's'} updated upstream`
     : checked > 0 ? 'Enabled mods are current from the last check' : 'No mod check yet';
-  $('#modStateSource').textContent = state.modStateSource === 'server.ini'
-    ? 'Recovered from server.ini because config\\mods.json was empty or missing. Review the recovered rows, then Save Mods to rebuild manager mod state.'
-    : 'Loaded from config\\mods.json. Save Mods keeps this structured manager state in sync with server.ini.';
+  renderModRecoveryPanel();
   $('#modLoadOrder').value = state.modLoadOrder.join(';');
   renderPendingMods(pendingMods, checked);
 
@@ -390,6 +391,37 @@ function renderMods() {
       renderMods();
     });
   });
+}
+
+function renderModRecoveryPanel() {
+  const diag = state.modDiagnostics || {};
+  const panel = $('#modRecoveryPanel');
+  const title = $('#modRecoveryTitle');
+  const body = $('#modRecoveryBody');
+  const repairButton = $('#repairModsBtn');
+  const managerCount = Number(diag.storedEntryCount || 0);
+  const iniCount = Number(diag.iniWorkshopCount || 0);
+  const loadOrderCount = Number(diag.iniLoadOrderCount || state.modLoadOrder.length || 0);
+  const needsRepair = Boolean(diag.needsEntryRepair || diag.needsLoadOrderRepair || (managerCount === 0 && iniCount > 0));
+
+  panel.classList.toggle('warning', needsRepair || state.modStateSource === 'server.ini');
+  repairButton.disabled = !diag.recoverableFromIni;
+  repairButton.hidden = !needsRepair && managerCount > 0;
+
+  if (needsRepair) {
+    title.textContent = 'Mod view can be repaired from server.ini.';
+    body.textContent = `Manager file has ${managerCount} mod row${managerCount === 1 ? '' : 's'}; active server.ini has ${iniCount} Workshop item${iniCount === 1 ? '' : 's'} and ${loadOrderCount} load-order item${loadOrderCount === 1 ? '' : 's'}. Repair rebuilds config\\mods.json without touching saves or restarting the server.`;
+    return;
+  }
+
+  if (state.modStateSource === 'server.ini') {
+    title.textContent = 'Mod rows were recovered from server.ini.';
+    body.textContent = `Recovered ${state.mods.length} mod row${state.mods.length === 1 ? '' : 's'} from the active server.ini. Save Mods after review to keep the manager state synchronized.`;
+    return;
+  }
+
+  title.textContent = 'Mod state is loaded from manager config.';
+  body.textContent = `config\\mods.json has ${managerCount || state.mods.length} mod row${(managerCount || state.mods.length) === 1 ? '' : 's'}; active server.ini has ${iniCount} Workshop item${iniCount === 1 ? '' : 's'}.`;
 }
 
 function renderPendingMods(pendingMods, checkedCount) {
@@ -609,6 +641,7 @@ async function refresh() {
   state.mods = payload.mods || [];
   state.modLoadOrder = payload.modLoadOrder || [];
   state.modStateSource = payload.modStateSource || '';
+  state.modDiagnostics = payload.modDiagnostics || {};
   state.health = payload.health || {};
   state.preflight = payload.preflight || {};
   state.paths = payload.paths || {};
@@ -805,6 +838,24 @@ function bindUi() {
       state.mods = result.mods;
       renderMods();
       appendOutput('Mod update check complete.');
+    } catch (error) {
+      appendOutput(error.message);
+    }
+  });
+
+  $('#repairModsBtn').addEventListener('click', async () => {
+    if (!confirm('Repair the manager mod view from the active server.ini? This rebuilds config\\mods.json and does not restart the server.')) return;
+    try {
+      appendOutput('Repairing mod view from server.ini.');
+      const result = await api('/api/mods/repair', { method: 'POST', body: '{}' });
+      state.mods = result.mods || [];
+      state.modLoadOrder = result.modLoadOrder || [];
+      state.modStateSource = result.modStateSource || 'mods.json';
+      state.modDiagnostics = result.modDiagnostics || {};
+      state.settings = result.settings || state.settings;
+      state.modsDirty = false;
+      renderMods();
+      appendOutput(`Mod view repaired from server.ini: ${state.mods.length} rows.`);
     } catch (error) {
       appendOutput(error.message);
     }
