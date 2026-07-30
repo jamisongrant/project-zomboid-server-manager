@@ -4,7 +4,7 @@ Windows admin panel and automation toolkit for self-hosted Project Zomboid dedic
 
 This project helps a local server owner install, configure, monitor, back up, update, and recover a Project Zomboid dedicated server without living in config files all day. The admin panel runs locally at `http://127.0.0.1:8787` and is designed for a single trusted machine.
 
-Project files live in `C:\src\project-zomboid-server`. Runtime server files, saves, logs, backups, and state live in `C:\pz`.
+Project files can live wherever you extract the release zip. Runtime server files, saves, logs, backups, and state default to `C:\pz`, and the setup wizard can point them at another drive such as `D:\pz`.
 
 ## What It Does
 
@@ -41,7 +41,7 @@ cd C:\src\project-zomboid-server
 .\RUN-SETUP-WIZARD.ps1
 ```
 
-The wizard asks for the server name, join password, player count, memory, firewall/automation options, and whether to start the server. It pre-fills from existing Project Zomboid server files when they are present.
+The wizard asks for the runtime folder, server name, join password, player count, memory, firewall/automation options, and whether to start the server. It pre-fills from existing Project Zomboid server files when they are present.
 
 When setup finishes, open:
 
@@ -91,7 +91,7 @@ This is not true hot swapping or sharding. The goal is a short, predictable main
 The wizard is the recommended path. For manual setup:
 
 1. Copy `config\server.env.example` to `config\server.env`.
-2. Edit `config\server.env` for your server name, password, admin password, RCON password, and memory.
+2. Edit `config\server.env` for your runtime folder, server name, password, admin password, RCON password, and memory.
 3. Run `scripts\install\Initialize-Directories.ps1`.
 4. Run `scripts\install\Install-SteamCmd.ps1`.
 5. Run `scripts\install\Install-PzServer.ps1`.

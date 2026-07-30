@@ -24,12 +24,14 @@ cd C:\src\project-zomboid-server
 
 The guided setup wizard asks a few questions with defaults, installs the server manager, opens the admin panel, and sends the user to the `Setup` checklist. `START-HERE.ps1` is still available as a browser-first launcher.
 
+Runtime files default to `C:\pz`. If the C drive is small, enter another runtime folder in the wizard, such as `D:\pz`; SteamCMD, server files, saves, logs, backups, and staging files will be stored under that folder.
+
 If SteamCMD reports `Failed to install app '380870' (Missing configuration)`, rerun the wizard or run `scripts\install\Install-PzServer.ps1`. Current releases retry the Project Zomboid server download automatically.
 
 For a mostly automatic install, run PowerShell as Administrator and use:
 
 ```powershell
-.\scripts\install\Install-PzManager.ps1 -PublicName "My PZ Server" -JoinPassword "change-me" -StartServer -RegisterAutomation -InstallFirewallRules
+.\scripts\install\Install-PzManager.ps1 -RuntimeRoot "D:\pz" -PublicName "My PZ Server" -JoinPassword "change-me" -StartServer -RegisterAutomation -InstallFirewallRules
 ```
 
 For a non-technical friend, send them to `docs\STARTUP-GUIDE.md`.

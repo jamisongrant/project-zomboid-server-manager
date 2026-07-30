@@ -1,4 +1,5 @@
 param(
+    [string]$RuntimeRoot = 'C:\pz',
     [string]$ServerName = 'servertest',
     [string]$PublicName = 'Project Zomboid Server',
     [string]$JoinPassword = '',
@@ -30,17 +31,22 @@ function New-LocalPassword {
 
 $admin = if ([string]::IsNullOrWhiteSpace($AdminPassword)) { New-LocalPassword } else { $AdminPassword }
 $rcon = if ([string]::IsNullOrWhiteSpace($RconPassword)) { New-LocalPassword } else { $RconPassword }
+$runtime = $RuntimeRoot.Trim()
+if ([string]::IsNullOrWhiteSpace($runtime)) {
+    $runtime = 'C:\pz'
+}
+$runtime = $runtime.TrimEnd('\', '/')
 
 $configPath = Get-PzDefaultConfigPath
 $content = @"
-PZ_ROOT=C:\pz
-PZ_STEAMCMD_DIR=C:\pz\steamcmd
-PZ_SERVER_DIR=C:\pz\server
-PZ_PROFILE_DIR=C:\pz\profile
-PZ_BACKUP_DIR=C:\pz\backups
-PZ_LOG_DIR=C:\pz\logs
-PZ_STATE_DIR=C:\pz\state
-PZ_STAGING_DIR=C:\pz\staging
+PZ_ROOT=$runtime
+PZ_STEAMCMD_DIR=$runtime\steamcmd
+PZ_SERVER_DIR=$runtime\server
+PZ_PROFILE_DIR=$runtime\profile
+PZ_BACKUP_DIR=$runtime\backups
+PZ_LOG_DIR=$runtime\logs
+PZ_STATE_DIR=$runtime\state
+PZ_STAGING_DIR=$runtime\staging
 
 PZ_APP_ID=380870
 PZ_WORKSHOP_APP_ID=108600

@@ -117,6 +117,7 @@ $summary | Add-Member -NotePropertyName 'projectRoot' -NotePropertyValue ([strin
 $summary | Add-Member -NotePropertyName 'runtimeRoot' -NotePropertyValue ([string]$config.Root)
 $summary | Add-Member -NotePropertyName 'isAdministrator' -NotePropertyValue $isAdministrator
 $summary | Add-Member -NotePropertyName 'defaults' -NotePropertyValue ([pscustomobject]@{
+    runtimeRoot = [string]$config.Root
     publicName = [string](Get-IniOrConfigDefault 'PublicName' $config.PublicName)
     joinPassword = [string](Get-IniOrConfigDefault 'Password' $config.Password)
     maxPlayers = [int](Get-IniOrConfigDefault 'MaxPlayers' ([string]$config.MaxPlayers))

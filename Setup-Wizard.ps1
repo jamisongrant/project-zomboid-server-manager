@@ -43,6 +43,7 @@ function Test-IsAdministrator {
 
 function Get-SetupDefaults {
     $defaults = @{
+        RuntimeRoot = 'C:\pz'
         PublicName = 'Project Zomboid Server'
         JoinPassword = (New-FriendlyPassword)
         MaxPlayers = '8'
@@ -54,6 +55,9 @@ function Get-SetupDefaults {
         $setupJson = & .\scripts\install\Test-PzSetup.ps1 -Json | Out-String
         $setup = $setupJson | ConvertFrom-Json
         if ($null -ne $setup.defaults) {
+            if (-not [string]::IsNullOrWhiteSpace($setup.defaults.runtimeRoot)) {
+                $defaults.RuntimeRoot = [string]$setup.defaults.runtimeRoot
+            }
             if (-not [string]::IsNullOrWhiteSpace($setup.defaults.publicName)) {
                 $defaults.PublicName = [string]$setup.defaults.publicName
             }
@@ -92,6 +96,7 @@ if ($null -eq (Get-Command node.exe -ErrorAction SilentlyContinue)) {
 
 $serverName = 'servertest'
 $defaults = Get-SetupDefaults
+$runtimeRoot = Read-WithDefault 'Runtime folder for server files, saves, logs, and backups' $defaults.RuntimeRoot
 $publicName = Read-WithDefault 'Server display name' $defaults.PublicName
 $joinPassword = Read-WithDefault 'Join password' $defaults.JoinPassword
 $maxPlayersText = Read-WithDefault 'Max players' $defaults.MaxPlayers
@@ -99,7 +104,7 @@ $memoryMin = Read-WithDefault 'Min server memory' $defaults.MemoryMin
 $memoryMax = Read-WithDefault 'Max server memory' $defaults.MemoryMax
 $startServer = Read-YesNo 'Start the server after install?' $true
 
-$serverRuntimeExists = Test-Path -LiteralPath 'C:\pz\server\jre64\bin\java.exe'
+$serverRuntimeExists = Test-Path -LiteralPath (Join-Path $runtimeRoot 'server\jre64\bin\java.exe')
 $skipServerInstall = $false
 if ($serverRuntimeExists) {
     $skipServerInstall = Read-YesNo 'Existing Project Zomboid server files found. Reuse them?' $true
@@ -123,6 +128,7 @@ if (-not [int]::TryParse($maxPlayersText, [ref]$maxPlayers)) {
 $maxPlayers = [Math]::Min(100, [Math]::Max(1, $maxPlayers))
 
 $installArgs = @{
+    RuntimeRoot = $runtimeRoot
     ServerName = $serverName
     PublicName = $publicName
     JoinPassword = $joinPassword

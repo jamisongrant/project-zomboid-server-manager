@@ -169,7 +169,9 @@ function seedSetupWizard(force = false) {
   const publicName = state.settings.PublicName || state.env.PZ_PUBLIC_NAME || defaults.publicName || 'Project Zomboid Server';
   const password = state.settings.Password || state.env.PZ_PASSWORD || defaults.joinPassword || newWizardPassword();
   const maxPlayers = state.settings.MaxPlayers || state.env.PZ_MAX_PLAYERS || defaults.maxPlayers || '8';
+  const runtimeRoot = state.env.PZ_ROOT || defaults.runtimeRoot || 'C:\\pz';
 
+  $('#wizardRuntimeRoot').value = runtimeRoot;
   $('#wizardPublicName').value = publicName;
   $('#wizardJoinPassword').value = password;
   $('#wizardMaxPlayers').value = maxPlayers;
@@ -209,6 +211,7 @@ function renderSetupWizardState() {
 function collectWizardOptions() {
   return {
     publicName: $('#wizardPublicName').value.trim() || 'Project Zomboid Server',
+    runtimeRoot: $('#wizardRuntimeRoot').value.trim() || 'C:\\pz',
     joinPassword: $('#wizardJoinPassword').value.trim(),
     maxPlayers: Number($('#wizardMaxPlayers').value || 8),
     memoryPreset: $('#wizardMemoryPreset').value,

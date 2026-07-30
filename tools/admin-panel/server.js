@@ -549,8 +549,10 @@ function runSetupInstall(options) {
     large: ['4096m', '8192m']
   }[memoryPreset] || ['2048m', '4096m'];
   const maxPlayers = Math.max(1, Math.min(100, Number(options.maxPlayers || 8)));
+  const runtimeRoot = String(options.runtimeRoot || 'C:\\pz').trim() || 'C:\\pz';
   const args = [
     'scripts\\install\\Install-PzManager.ps1',
+    '-RuntimeRoot', runtimeRoot.slice(0, 180),
     '-PublicName', String(options.publicName || 'Project Zomboid Server').slice(0, 80),
     '-JoinPassword', String(options.joinPassword || '').slice(0, 80),
     '-MaxPlayers', String(maxPlayers),

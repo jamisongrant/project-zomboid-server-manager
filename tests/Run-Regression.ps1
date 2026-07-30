@@ -159,6 +159,22 @@ Add-Check 'Installer and admin panel agree on env keys' {
     }
 }
 
+Add-Check 'Installer supports configurable runtime root' {
+    $installer = Get-Content -LiteralPath (Join-Path $projectRoot 'scripts/install/Install-PzManager.ps1') -Raw
+    $wizard = Get-Content -LiteralPath (Join-Path $projectRoot 'Setup-Wizard.ps1') -Raw
+    $adminIndex = Get-Content -LiteralPath (Join-Path $projectRoot 'tools/admin-panel/public/index.html') -Raw
+    $adminServer = Get-Content -LiteralPath (Join-Path $projectRoot 'tools/admin-panel/server.js') -Raw
+
+    foreach ($text in @($installer, $wizard, $adminIndex, $adminServer)) {
+        if ($text -notmatch 'RuntimeRoot|runtimeRoot|wizardRuntimeRoot') {
+            throw 'Runtime root must be exposed through installer and setup wizard paths.'
+        }
+    }
+    if ($installer -notmatch 'PZ_ROOT=\$runtime') {
+        throw 'Installer must derive PZ_ROOT from the selected runtime root.'
+    }
+}
+
 Add-Check 'Mod example JSON parses' {
     $mods = Get-Content -LiteralPath (Join-Path $projectRoot 'config/mods.example.json') -Raw | ConvertFrom-Json
     if (@($mods).Count -lt 1) {
