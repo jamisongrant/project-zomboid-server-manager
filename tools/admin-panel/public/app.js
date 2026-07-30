@@ -71,6 +71,29 @@ const actionConfirmations = {
   restartPanel: 'Restart only the admin panel? The Project Zomboid server will keep running.'
 };
 
+const actionDescriptions = {
+  start: 'Starts the Project Zomboid server with the current saved config. Wait for Ready before players join.',
+  stop: 'Saves and stops the Project Zomboid server. Everyone connected will be disconnected.',
+  restart: 'Creates a save backup, stops the server, then starts it again. Use after normal config changes.',
+  smartRefreshMods: 'Checks the maintenance window and player activity before doing a staged mod/server refresh. Best hands-off option.',
+  prepareStagedUpdate: 'Downloads server and Workshop updates into the staging folder while the active server can keep running.',
+  stagedRefresh: 'Stops the server, swaps in the staged update, starts it again, and keeps rollback files if health fails.',
+  rollbackStagedUpdate: 'Reverts to the previous staged server copy if a staged refresh broke startup or mod loading.',
+  backup: 'Creates a save backup now. Use before mod changes, config edits, or updates.',
+  update: 'Runs SteamCMD validation/update for the dedicated server files. May require restart before use.',
+  updateMods: 'Downloads enabled Workshop items from config\\mods.json. It does not decide whether the server should restart.',
+  refreshMods: 'Updates Workshop mods, backs up saves, and restarts so Project Zomboid loads the refreshed mod files.',
+  watchdog: 'Checks whether the server appears unhealthy and restarts it when watchdog rules say recovery is needed.',
+  enableAutomation: 'Registers Windows scheduled tasks for startup, watchdog, backups, and optional smart mod refresh.',
+  disableAutomation: 'Turns off scheduled manager tasks. It does not stop the currently running server.',
+  shutdownPanel: 'Closes only this local web admin panel. The Project Zomboid server keeps running.',
+  restartPanel: 'Restarts only the local web admin panel. Use when the UI is stale or disconnected.',
+  installFirewallRules: 'Adds Windows Firewall rules for Project Zomboid ports. Router port forwarding is still separate.',
+  applyConfig: 'Writes saved manager settings into the active server files without restarting the server.',
+  applyConfigRestart: 'Writes config, backs up saves, then restarts so Project Zomboid actually loads the changes.',
+  pruneBackups: 'Deletes old backups according to retention settings. Does not delete the active world save.'
+};
+
 function $(selector) {
   return document.querySelector(selector);
 }
@@ -576,6 +599,22 @@ async function loadConfigFiles(render = true) {
   if (render) renderConfigFiles();
 }
 
+function renderActionHelp() {
+  all('[data-help-actions]').forEach((container) => {
+    const actions = container.dataset.helpActions.split(',').map((item) => item.trim()).filter(Boolean);
+    container.innerHTML = actions.map((action) => {
+      const label = actionLabels[action] || action;
+      const description = actionDescriptions[action] || 'No description available yet.';
+      return `
+        <div class="action-help-card">
+          <strong>${escapeHtml(label)}</strong>
+          <span>${escapeHtml(description)}</span>
+        </div>
+      `;
+    }).join('');
+  });
+}
+
 function hasConfigChanges() {
   return Object.values(state.configChanges || {}).some((bucket) => Object.keys(bucket || {}).length > 0);
 }
@@ -885,5 +924,6 @@ function activateTab(tab) {
 
 bindUi();
 activateTab(location.hash.replace('#', '') || 'overview');
+renderActionHelp();
 refresh().catch((error) => appendOutput(error.message));
 setInterval(() => refresh().catch(() => {}), 10000);

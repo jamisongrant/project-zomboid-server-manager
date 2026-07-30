@@ -57,6 +57,38 @@ p {
   gap: 10px;
 }
 
+.action-help {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  max-width: 1180px;
+  margin: 12px 0 18px;
+}
+
+.action-help-card {
+  min-height: 74px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(32, 39, 36, .62);
+  padding: 11px 12px;
+}
+
+.action-help-card strong,
+.action-help-card span {
+  display: block;
+}
+
+.action-help-card strong {
+  font-size: 14px;
+}
+
+.action-help-card span {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
 .badge {
   min-width: 86px;
   padding: 7px 10px;
