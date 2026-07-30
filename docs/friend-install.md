@@ -9,17 +9,18 @@
 
 ## Install
 
-Extract the release zip to:
+Download `PzManagerSetup-*.exe` from the latest GitHub release, then double-click it. Choose where to install the manager and let the GUI wizard open.
+
+The release zip is still available as a fallback. If you use the zip, extract it to:
 
 ```text
 C:\src\project-zomboid-server
 ```
 
-Run PowerShell:
+Then double-click:
 
-```powershell
-cd C:\src\project-zomboid-server
-.\INSTALL-GUI.ps1
+```text
+INSTALL-FIRST.cmd
 ```
 
 The GUI setup wizard asks a few questions with defaults, lets the user browse for the runtime folder, installs the server manager, opens the admin panel, and sends the user to the `Setup` checklist. `RUN-SETUP-WIZARD.ps1` and `START-HERE.ps1` are still available as fallback launchers.
@@ -76,6 +77,7 @@ Or run:
 cd C:\src\project-zomboid-server
 .\tests\Run-Regression.ps1
 .\scripts\package\New-PzReleasePackage.ps1
+.\scripts\package\New-PzReleaseInstaller.ps1
 ```
 
-The release zip excludes local secrets and local mod state.
+The release zip and Windows installer exclude local secrets and local mod state.

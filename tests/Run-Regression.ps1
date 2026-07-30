@@ -236,6 +236,20 @@ Add-Check 'Package script excludes local secrets' {
     }
 }
 
+Add-Check 'Windows installer builder is present' {
+    $installerScriptPath = Join-Path $projectRoot 'scripts/package/New-PzReleaseInstaller.ps1'
+    if (-not (Test-Path -LiteralPath $installerScriptPath)) {
+        throw 'Missing scripts/package/New-PzReleaseInstaller.ps1.'
+    }
+
+    $installerScript = Get-Content -LiteralPath $installerScriptPath -Raw
+    foreach ($required in @('iexpress.exe', 'PzManagerSetup', 'PzManager-Setup.cmd', 'PzManager-Setup.ps1', 'INSTALL-FIRST.cmd', 'ExecutionPolicy')) {
+        if ($installerScript -notmatch [regex]::Escape($required)) {
+            throw "Installer builder does not include $required."
+        }
+    }
+}
+
 Add-Check 'Friend docs are present' {
     foreach ($doc in @('README.md', 'docs/STARTUP-GUIDE.md', 'docs/friend-install.md', 'docs/release-checklist.md', 'SECURITY.md', 'SUPPORT.md', 'LICENSE', 'NOTICE')) {
         if (-not (Test-Path -LiteralPath (Join-Path $projectRoot $doc))) {

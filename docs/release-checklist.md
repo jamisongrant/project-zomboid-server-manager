@@ -2,8 +2,11 @@
 
 - Run `tests\Run-Regression.ps1`.
 - Create a package with `scripts\package\New-PzReleasePackage.ps1`.
+- Create the friend-facing Windows installer with `scripts\package\New-PzReleaseInstaller.ps1`.
 - Extract the zip into a clean folder.
-- Run `INSTALL-FIRST.ps1`, `RUN-SETUP-WIZARD.ps1`, or `scripts\install\Install-PzManager.ps1`.
+- Run `PzManagerSetup-*.exe` from `dist\` on a clean Windows machine or VM.
+- Confirm the installer asks for an install folder and opens the GUI wizard.
+- Run `INSTALL-FIRST.cmd`, `RUN-SETUP-WIZARD.ps1`, or `scripts\install\Install-PzManager.ps1`.
 - Confirm `config\server.env` is generated and ignored by Git.
 - Confirm the admin panel opens at `http://127.0.0.1:8787`.
 - Confirm `START-HERE.ps1` opens the admin panel.
@@ -17,4 +20,5 @@
 - Confirm `dist\*.zip` does not include `config\server.env` or `config\mods.json`.
 - Run `tests\package\Test-PzPackage.ps1` to validate the extracted package on Windows.
 - Run `tests\docker\Test-PzPackageInDocker.ps1` when Docker is available to validate the extracted package in a clean Linux container.
-- Run one clean Windows install smoke from the release zip before handing it to someone else.
+- Attach both `PzManagerSetup-*.exe` and `pz-manager-*.zip` to the GitHub release.
+- Run one clean Windows install smoke from the release installer before handing it to someone else.

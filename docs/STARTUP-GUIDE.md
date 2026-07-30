@@ -5,13 +5,16 @@ This guide is for the person running the server.
 ## First Time
 
 1. Install Node.js 20 or newer from `https://nodejs.org/`.
-2. Extract the release zip to:
+2. Download `PzManagerSetup-*.exe` from the latest GitHub release.
+3. Double-click the installer, pick an install folder, and continue through the GUI wizard.
+
+The zip is still available as a fallback. If you use the zip, extract it to:
 
 ```text
 C:\src\project-zomboid-server
 ```
 
-3. Double-click `INSTALL-FIRST.cmd`.
+Then double-click `INSTALL-FIRST.cmd`.
 4. Pick the runtime folder with the Browse button and answer the guided setup questions. Pick the defaults unless you already know you want something different.
 5. The admin panel opens to the setup checklist when the wizard finishes.
 

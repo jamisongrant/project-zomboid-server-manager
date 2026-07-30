@@ -28,7 +28,9 @@ Project files can live wherever you extract the release zip. Runtime server file
 
 ## Quick Start
 
-Download a release zip, extract it to:
+Download `PzManagerSetup-*.exe` from the latest release, double-click it, choose an install folder, and continue through the GUI wizard.
+
+The release zip is still available as a fallback. If you use the zip, extract it to:
 
 ```text
 C:\src\project-zomboid-server
@@ -109,9 +111,10 @@ The wizard is the recommended path. For manual setup:
 ```powershell
 .\tests\Run-Regression.ps1
 .\scripts\package\New-PzReleasePackage.ps1
+.\scripts\package\New-PzReleaseInstaller.ps1
 ```
 
-Release zips are written to `dist\` and exclude local secrets/state such as `config\server.env` and `config\mods.json`.
+Release zips and Windows installer exes are written to `dist\`. They exclude local secrets/state such as `config\server.env` and `config\mods.json`.
 
 ## More Docs
 
