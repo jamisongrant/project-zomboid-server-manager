@@ -229,6 +229,12 @@ Add-Check 'Admin settings persist across apply config' {
     if ($appJs -notmatch 'settingsDirty' -or $appJs -notmatch 'modsDirty' -or $appJs -notmatch 'hasConfigChanges') {
         throw 'Admin frontend must not auto-refresh over in-progress edits.'
     }
+    if ($serverJs -notmatch 'effectiveModState' -or $serverJs -notmatch 'modStateFromIni' -or $serverJs -notmatch 'modStateSource') {
+        throw 'Admin backend must recover mod state from server.ini when mods.json is missing.'
+    }
+    if ($appJs -notmatch 'Recovered from server.ini') {
+        throw 'Admin frontend must explain recovered mod state.'
+    }
 }
 
 Add-Check 'Admin persistence test exists' {
@@ -241,6 +247,11 @@ Add-Check 'Admin persistence test exists' {
     foreach ($required in @('/api/settings', '/api/config-files', '/api/mods', 'PZ_PUBLIC_NAME=After Name', 'WorkshopItems=123456')) {
         if ($test -notmatch [regex]::Escape($required)) {
             throw "Admin persistence test must cover $required."
+        }
+    }
+    foreach ($required in @('modStateSource', 'RecoveredA', 'WorkshopItems=111;222')) {
+        if ($test -notmatch [regex]::Escape($required)) {
+            throw "Admin persistence test must cover recovered mod state: $required."
         }
     }
 }
@@ -449,7 +460,7 @@ if (-not $SkipLiveApi) {
     }
 
     Add-Check 'Admin API persistence endpoints retain edits' {
-        & (Join-Path $projectRoot 'tests/admin-panel/Test-AdminPanelPersistence.ps1') -BaseUrl 'http://127.0.0.1:18787' -StartPanel
+        & (Join-Path $projectRoot 'tests/admin-panel/Test-AdminPanelPersistence.ps1') -BaseUrl 'http://127.0.0.1:18791' -StartPanel
     }
 }
 

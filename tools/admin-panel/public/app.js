@@ -3,6 +3,7 @@ const state = {
   settings: {},
   mods: [],
   modLoadOrder: [],
+  modStateSource: '',
   health: {},
   preflight: {},
   backups: [],
@@ -345,6 +346,9 @@ function renderMods() {
   $('#modHealth').textContent = needsUpdate > 0
     ? `${needsUpdate} enabled mod${needsUpdate === 1 ? '' : 's'} updated upstream`
     : checked > 0 ? 'Enabled mods are current from the last check' : 'No mod check yet';
+  $('#modStateSource').textContent = state.modStateSource === 'server.ini'
+    ? 'Recovered from server.ini because config\\mods.json was empty or missing. Review the recovered rows, then Save Mods to rebuild manager mod state.'
+    : 'Loaded from config\\mods.json. Save Mods keeps this structured manager state in sync with server.ini.';
   $('#modLoadOrder').value = state.modLoadOrder.join(';');
   renderPendingMods(pendingMods, checked);
 
@@ -604,6 +608,7 @@ async function refresh() {
   state.settings = payload.settings || {};
   state.mods = payload.mods || [];
   state.modLoadOrder = payload.modLoadOrder || [];
+  state.modStateSource = payload.modStateSource || '';
   state.health = payload.health || {};
   state.preflight = payload.preflight || {};
   state.paths = payload.paths || {};
@@ -783,6 +788,7 @@ function bindUi() {
       });
       state.mods = result.mods;
       state.modLoadOrder = result.modLoadOrder || [];
+      state.modStateSource = result.modStateSource || 'mods.json';
       state.settings = result.settings;
       state.modsDirty = false;
       appendOutput('Mods saved to server.ini.');

@@ -44,6 +44,15 @@ function Wait-AdminPanel {
     throw "Admin panel did not respond at ${BaseUrl}."
 }
 
+function Stop-AdminPanelApi {
+    try {
+        Invoke-JsonApi -Path '/api/action' -Method 'POST' -Body @{ action = 'shutdownPanel' } | Out-Null
+        Start-Sleep -Milliseconds 750
+    } catch {
+        # The panel may not be running or may already be shutting down.
+    }
+}
+
 New-Item -ItemType Directory -Path $backupRoot -Force | Out-Null
 
 try {
@@ -114,6 +123,7 @@ SandboxVars = {
 '@
 
     if ($StartPanel) {
+        Stop-AdminPanelApi
         $port = ([uri]$BaseUrl).Port
         $panelProcess = Start-Process -FilePath 'powershell.exe' -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $projectRoot 'tools\admin-panel\Start-AdminPanel.ps1'), '-Port', ([string]$port) -PassThru -WindowStyle Hidden
     }
@@ -191,8 +201,39 @@ SandboxVars = {
         throw 'Mods endpoint did not sync server.ini WorkshopItems/Mods.'
     }
 
+    Remove-Item -LiteralPath $modsPath -Force -ErrorAction SilentlyContinue
+    Set-Content -LiteralPath (Join-Path $serverConfigDir "${serverName}.ini") -Encoding ASCII -Value @"
+PublicName=Recovered Name
+WorkshopItems=111;222
+Mods=RecoveredA;RecoveredB
+"@
+
+    $state = Invoke-JsonApi -Path '/api/state'
+    if ($state.modStateSource -ne 'server.ini') {
+        throw 'API did not report server.ini as recovered mod source.'
+    }
+    if (@($state.mods).Count -ne 2 -or $state.mods[0].workshopId -ne '111' -or $state.mods[0].modId -ne 'RecoveredA') {
+        throw 'API did not recover mod rows from server.ini.'
+    }
+
+    Invoke-JsonApi -Path '/api/mods' -Method 'POST' -Body @{
+        mods = @()
+        modLoadOrder = @('RecoveredA', 'RecoveredB')
+    } | Out-Null
+    $iniText = Get-Content -LiteralPath (Join-Path $serverConfigDir "${serverName}.ini") -Raw
+    if ($iniText -notmatch 'WorkshopItems=111;222') {
+        throw 'Saving empty structured mods with a load order erased existing WorkshopItems.'
+    }
+    if ($iniText -notmatch 'Mods=RecoveredA;RecoveredB') {
+        throw 'Saving recovered load order did not preserve Mods.'
+    }
+
     Write-Host 'Admin panel persistence test passed.'
 } finally {
+    if ($StartPanel) {
+        Stop-AdminPanelApi
+    }
+
     if ($null -ne $panelProcess -and -not $panelProcess.HasExited) {
         Stop-Process -Id $panelProcess.Id -Force -ErrorAction SilentlyContinue
     }

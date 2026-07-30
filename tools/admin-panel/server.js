@@ -428,6 +428,50 @@ function readModState() {
   }
 }
 
+function modStateFromIni(iniValues) {
+  const workshopIds = splitModIds(iniValues.WorkshopItems || '');
+  const modIds = splitModIds(iniValues.Mods || '');
+  const max = Math.max(workshopIds.length, modIds.length);
+  const entries = [];
+
+  for (let index = 0; index < max; index++) {
+    const workshopId = workshopIds[index] || '';
+    const modId = modIds[index] || '';
+    entries.push({
+      name: modId || workshopId || `Imported mod ${index + 1}`,
+      workshopId,
+      modId,
+      enabled: true,
+      lastKnownUpdated: 0,
+      lastCheckedAt: '',
+      needsUpdate: false,
+      notes: workshopId && modId ? 'Recovered from server.ini' : 'Recovered from server.ini; verify Workshop ID and Mod ID pairing.',
+      steamTitle: '',
+      steamUrl: workshopId ? `https://steamcommunity.com/sharedfiles/filedetails/?id=${workshopId}` : '',
+      currentSteamUpdated: 0,
+      unavailable: false
+    });
+  }
+
+  return { entries, modLoadOrder: modIds, recoveredFromIni: true };
+}
+
+function effectiveModState() {
+  const stored = readModState();
+  const ini = readIni(serverIniPath()).values;
+  const iniState = modStateFromIni(ini);
+
+  if (stored.entries.length === 0 && iniState.entries.length > 0) {
+    return iniState;
+  }
+
+  if (stored.modLoadOrder.length === 0 && iniState.modLoadOrder.length > 0) {
+    return { ...stored, modLoadOrder: iniState.modLoadOrder, recoveredFromIni: false };
+  }
+
+  return { ...stored, recoveredFromIni: false };
+}
+
 function writeMods(mods, modLoadOrder = []) {
   const clean = mods.map((mod) => ({
     name: String(mod.name || '').trim(),
@@ -468,13 +512,20 @@ function unique(values) {
 }
 
 function syncModsToIni(mods, modLoadOrder = []) {
+  const currentIni = readIni(serverIniPath()).values;
   const enabled = mods.filter((mod) => mod.enabled);
-  const workshopItems = unique(enabled.map((mod) => mod.workshopId).filter(Boolean)).join(';');
+  const workshopIds = unique(enabled.map((mod) => mod.workshopId).filter(Boolean));
   const loadOrder = modLoadOrder.length > 0
     ? modLoadOrder
     : enabled.flatMap((mod) => splitModIds(mod.modId));
   const modIds = unique(loadOrder).join(';');
-  writeIni(serverIniPath(), { WorkshopItems: workshopItems, Mods: modIds });
+  const updates = { Mods: modIds };
+
+  if (workshopIds.length > 0 || !currentIni.WorkshopItems) {
+    updates.WorkshopItems = workshopIds.join(';');
+  }
+
+  writeIni(serverIniPath(), updates);
 }
 
 function runPowerShell(args) {
@@ -757,7 +808,7 @@ function systemHealth() {
 }
 
 function modPreflight() {
-  const modState = readModState();
+  const modState = effectiveModState();
   const workshopIds = modState.entries.map((mod) => mod.workshopId).filter(Boolean);
   const loadOrder = modState.modLoadOrder;
   const duplicateWorkshop = workshopIds.filter((id, index) => workshopIds.indexOf(id) !== index);
@@ -771,6 +822,7 @@ function modPreflight() {
     duplicateMods: unique(duplicateMods),
     unavailable,
     missingNames,
+    recoveredFromIni: Boolean(modState.recoveredFromIni),
     ok: duplicateWorkshop.length === 0 && unavailable.length === 0
   };
 }
@@ -866,7 +918,7 @@ async function route(req, res) {
     if (req.method === 'GET' && url.pathname === '/api/state') {
       const env = readEnv();
       const ini = readIni(serverIniPath()).values;
-      const modState = readModState();
+      const modState = effectiveModState();
       const [status, players] = await Promise.all([runStatus(), runPlayers()]);
       const health = systemHealth();
       health.players = players;
@@ -875,6 +927,7 @@ async function route(req, res) {
         settings: Object.fromEntries(editableIniKeys.map((key) => [key, ini[key] ?? ''])),
         mods: modState.entries,
         modLoadOrder: modState.modLoadOrder.length > 0 ? modState.modLoadOrder : splitModIds(ini.Mods || ''),
+        modStateSource: modState.recoveredFromIni ? 'server.ini' : 'mods.json',
         health,
         preflight: modPreflight(),
         status,
@@ -960,7 +1013,8 @@ async function route(req, res) {
       const mods = writeMods(body.mods || [], body.modLoadOrder || []);
       const modState = readModState();
       syncModsToIni(mods, modState.modLoadOrder);
-      sendJson(res, 200, { ok: true, mods, modLoadOrder: modState.modLoadOrder, settings: readIni(serverIniPath()).values });
+      const nextState = effectiveModState();
+      sendJson(res, 200, { ok: true, mods: nextState.entries, modLoadOrder: nextState.modLoadOrder, modStateSource: nextState.recoveredFromIni ? 'server.ini' : 'mods.json', settings: readIni(serverIniPath()).values });
       return;
     }
 
