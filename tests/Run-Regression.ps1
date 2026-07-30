@@ -257,6 +257,28 @@ Add-Check 'Admin static assets are wired' {
     }
 }
 
+Add-Check 'Admin UI explains status and risky actions' {
+    $index = Get-Content -LiteralPath (Join-Path $projectRoot 'tools/admin-panel/public/index.html') -Raw
+    $appJs = Get-Content -LiteralPath (Join-Path $projectRoot 'tools/admin-panel/public/app.js') -Raw
+    $styles = Get-Content -LiteralPath (Join-Path $projectRoot 'tools/admin-panel/public/styles.css') -Raw
+
+    foreach ($required in @('nextStepPanel', 'statusMeaning', 'joinInfo', 'guidance-panel', 'Advanced Actions')) {
+        if ($index -notmatch [regex]::Escape($required)) {
+            throw "Admin UI must include $required."
+        }
+    }
+    foreach ($required in @('renderNextStep', 'actionConfirmations', 'Apply config + restart', 'Server is starting')) {
+        if ($appJs -notmatch [regex]::Escape($required)) {
+            throw "Admin frontend must include explanatory behavior for $required."
+        }
+    }
+    foreach ($required in @('.guidance-panel', '.status-explainer')) {
+        if ($styles -notmatch [regex]::Escape($required)) {
+            throw "Admin styles must include $required."
+        }
+    }
+}
+
 Add-Check 'Package script excludes local secrets' {
     $packageScript = Get-Content -LiteralPath (Join-Path $projectRoot 'scripts/package/New-PzReleasePackage.ps1') -Raw
     foreach ($secret in @('config\server.env', 'config\mods.json', '.git')) {

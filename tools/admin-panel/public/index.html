@@ -34,17 +34,26 @@
     </aside>
 
     <section class="panel active" id="overview">
+      <div class="guidance-panel" id="nextStepPanel">
+        <strong id="nextStepTitle">Checking server state...</strong>
+        <span id="nextStepBody">The admin panel is loading setup, health, and server status.</span>
+      </div>
       <div class="metrics">
         <div class="metric"><span>Server</span><strong id="serverName">-</strong></div>
         <div class="metric"><span>Players</span><strong id="maxPlayers">-</strong></div>
         <div class="metric"><span>Ports</span><strong id="ports">-</strong></div>
         <div class="metric"><span>Memory</span><strong id="memory">-</strong></div>
       </div>
+      <div class="status-explainer">
+        <div><span>Status meaning</span><strong id="statusMeaning">Checking local server process.</strong></div>
+        <div><span>What changes are safe?</span><strong>Manager updates preserve server config, mods, saves, logs, backups, and runtime files.</strong></div>
+        <div><span>Join info</span><strong id="joinInfo">Waiting for config.</strong></div>
+      </div>
       <div class="action-row">
-        <button class="primary" data-action="start">Start</button>
-        <button data-action="stop">Stop</button>
-        <button data-action="restart">Restart + Backup</button>
-        <button data-action="smartRefreshMods">Smart Mod Refresh</button>
+        <button class="primary" data-action="start" title="Start the Project Zomboid server using the current config.">Start</button>
+        <button data-action="stop" title="Save and stop the Project Zomboid server.">Stop</button>
+        <button data-action="restart" title="Back up saves, stop the server, then start it again.">Restart + Backup</button>
+        <button data-action="smartRefreshMods" title="Refresh mods only when player activity and the maintenance window allow it.">Smart Mod Refresh</button>
       </div>
     </section>
 
@@ -59,10 +68,18 @@
           <button id="refreshSetupBtn" type="button">Refresh Check</button>
         </div>
       </div>
+      <div class="guidance-panel compact">
+        <strong>Setup is about the machine, not the world save.</strong>
+        <span>Running the setup wizard updates manager config and missing dependencies. It does not delete saves, backups, runtime files, or mod state.</span>
+      </div>
       <div id="setupList" class="setup-list"></div>
     </section>
 
     <section class="panel" id="settings">
+      <div class="guidance-panel compact">
+        <strong>Settings save first, then apply to the running server.</strong>
+        <span>Use Save Settings to persist values. If the server is already running, use Apply With Restart so Project Zomboid loads them.</span>
+      </div>
       <form id="settingsForm" class="grid-form">
         <label>Public name<input name="PublicName"></label>
         <label>Description<input name="PublicDescription"></label>
@@ -92,11 +109,15 @@
       </form>
       <div class="action-row">
         <button class="primary" id="saveSettingsBtn">Save Settings</button>
-        <button data-action="applyConfigRestart">Apply With Restart</button>
+        <button data-action="applyConfigRestart" title="Write config files, back up, restart, and reload the server with current settings.">Apply With Restart</button>
       </div>
     </section>
 
     <section class="panel" id="configFiles">
+      <div class="guidance-panel compact">
+        <strong>Config edits are direct file edits.</strong>
+        <span>Saving here updates the active INI or SandboxVars file and creates a backup first. Restart the server for most changes to take effect.</span>
+      </div>
       <div class="config-toolbar">
         <div class="segmented">
           <button id="iniConfigBtn" class="active" type="button">Server INI</button>
@@ -119,6 +140,10 @@
     </section>
 
     <section class="panel" id="mods">
+      <div class="guidance-panel compact">
+        <strong>Mods need both server and player clients to agree.</strong>
+        <span>Save Mods updates the server load list. Workshop updates still require a server restart, and players may need Steam to finish client-side downloads.</span>
+      </div>
       <div class="mod-toolbar">
         <button id="addModBtn" class="primary">Add Mod</button>
         <button id="saveModsBtn">Save Mods</button>
@@ -146,6 +171,10 @@
     </section>
 
     <section class="panel" id="health">
+      <div class="guidance-panel compact">
+        <strong>Health shows automation and safety state.</strong>
+        <span>Closing the admin panel does not stop the Project Zomboid server. Disable Automation stops scheduled tasks without deleting anything.</span>
+      </div>
       <div class="metrics">
         <div class="metric"><span>Players</span><strong id="playerCount">-</strong></div>
         <div class="metric"><span>Watchdog</span><strong id="watchdogState">-</strong></div>
@@ -154,17 +183,21 @@
         <div class="metric"><span>Staged Update</span><strong id="stagedUpdateState">-</strong></div>
       </div>
       <div class="action-row">
-        <button data-action="watchdog">Run Watchdog</button>
-        <button data-action="enableAutomation">Enable Automation</button>
-        <button data-action="disableAutomation">Disable Automation</button>
-        <button data-action="shutdownPanel">Close Admin Panel</button>
-        <button data-action="installFirewallRules">Install Firewall Rules</button>
-        <button data-action="smartRefreshMods">Smart Mod Refresh</button>
+        <button data-action="watchdog" title="Check the server and restart it if watchdog rules say it should be recovered.">Run Watchdog</button>
+        <button data-action="enableAutomation" title="Register scheduled Windows tasks for hands-off startup/watchdog/update behavior.">Enable Automation</button>
+        <button data-action="disableAutomation" title="Disable scheduled Windows tasks. This does not stop the server or delete files.">Disable Automation</button>
+        <button data-action="shutdownPanel" title="Close only this local admin web panel.">Close Admin Panel</button>
+        <button data-action="installFirewallRules" title="Add Windows Firewall rules for Project Zomboid ports. Requires Administrator permission.">Install Firewall Rules</button>
+        <button data-action="smartRefreshMods" title="Refresh mods only when player activity and the maintenance window allow it.">Smart Mod Refresh</button>
       </div>
       <div class="path-list" id="healthDetails"></div>
     </section>
 
     <section class="panel" id="backups">
+      <div class="guidance-panel compact">
+        <strong>Backups protect saves before risky work.</strong>
+        <span>Restoring a backup stops the server, creates a pre-restore backup, restores the selected save, then restarts.</span>
+      </div>
       <div class="action-row">
         <button data-action="backup">Backup Saves</button>
         <button id="refreshBackupsBtn">Refresh Backups</button>
@@ -185,6 +218,10 @@
           <h2>Advanced Actions</h2>
           <p>Maintenance, recovery, automation, and staged update controls.</p>
         </div>
+      </div>
+      <div class="guidance-panel compact warning">
+        <strong>Advanced actions can restart or modify server files.</strong>
+        <span>Use Overview for daily operation. Use this panel for updates, staged refreshes, rollback, firewall, automation, and cleanup.</span>
       </div>
       <div class="ops-grid">
         <button data-action="backup">Backup Saves</button>

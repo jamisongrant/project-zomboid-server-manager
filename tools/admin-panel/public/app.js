@@ -30,6 +30,43 @@ const boolKeys = new Set([
 
 const wizardPasswordChars = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
+const actionLabels = {
+  start: 'Start server',
+  stop: 'Stop server',
+  restart: 'Restart + backup',
+  smartRefreshMods: 'Smart mod refresh',
+  prepareStagedUpdate: 'Prepare staged update',
+  stagedRefresh: 'Apply staged refresh',
+  rollbackStagedUpdate: 'Rollback staged update',
+  backup: 'Backup saves',
+  update: 'Update server files',
+  updateMods: 'Update mods',
+  refreshMods: 'Refresh mods',
+  watchdog: 'Run watchdog',
+  enableAutomation: 'Enable automation',
+  disableAutomation: 'Disable automation',
+  shutdownPanel: 'Close admin panel',
+  installFirewallRules: 'Install firewall rules',
+  applyConfig: 'Apply config',
+  applyConfigRestart: 'Apply config + restart',
+  pruneBackups: 'Prune backups'
+};
+
+const actionConfirmations = {
+  stop: 'Stop the Project Zomboid server now? Current players will be disconnected.',
+  restart: 'Back up saves and restart the Project Zomboid server now?',
+  stagedRefresh: 'Apply staged refresh now? This warns players, stops the server, swaps staged files in, starts again, and rolls back if health fails.',
+  rollbackStagedUpdate: 'Rollback to the previous staged server copy and restart?',
+  refreshMods: 'Refresh mods now? This may restart the server.',
+  update: 'Update Project Zomboid server files now? This may restart the server.',
+  updateMods: 'Update Workshop mods now? This may require a server restart before players can join.',
+  applyConfigRestart: 'Apply saved config and restart now? Current players will be disconnected.',
+  installFirewallRules: 'Install Windows Firewall rules now? This requires Administrator permission.',
+  enableAutomation: 'Enable scheduled background tasks for startup, watchdog, restart, and updates?',
+  disableAutomation: 'Disable scheduled background tasks? This does not stop the running server.',
+  shutdownPanel: 'Close only the admin panel? The Project Zomboid server will keep running.'
+};
+
 function $(selector) {
   return document.querySelector(selector);
 }
@@ -65,6 +102,11 @@ function renderStatus(payload) {
   $('#runBadge').textContent = ready ? 'Ready' : running ? 'Starting' : 'Stopped';
   $('#runBadge').className = `badge ${ready ? 'running' : running ? 'starting' : 'stopped'}`;
   $('#pidBadge').textContent = running ? `PID ${status.Pid}` : 'No PID';
+  $('#statusMeaning').textContent = ready
+    ? 'Players should be able to join if router/firewall settings are correct.'
+    : running
+      ? 'The server process is running but still warming up or not yet query-ready. Check Logs if this lasts several minutes.'
+      : 'The server process is stopped. Use Start when setup is complete.';
 }
 
 function renderOverview() {
@@ -76,6 +118,48 @@ function renderOverview() {
   $('#envPath').textContent = state.paths.envPath || '';
   $('#iniPath').textContent = state.paths.iniPath || '';
   $('#modsPath').textContent = state.paths.modsPath || '';
+  const publicName = state.settings.PublicName || state.env.PZ_PUBLIC_NAME || 'Project Zomboid';
+  const port = state.settings.DefaultPort || state.env.PZ_PORT || '16261';
+  $('#joinInfo').textContent = `${publicName} on port ${port}. Remote players need the host public IP and matching UDP port forwarding.`;
+  renderNextStep();
+}
+
+function renderNextStep() {
+  const setupReady = Boolean(state.setup?.ok);
+  const statusPayload = state.statusPayload?.status?.status || state.statusPayload?.status || {};
+  const running = Boolean(statusPayload.Running);
+  const ready = Boolean(statusPayload.Ready);
+  const pendingMods = state.mods.filter((mod) => mod.enabled && mod.needsUpdate).length;
+  const staged = state.health?.stagedUpdate || {};
+  const setupTodo = (state.setup?.checks || []).filter((check) => !check.ok && !['firewall', 'automation', 'stagedUpdate', 'rollback'].includes(check.id));
+
+  let title = 'Server manager is ready.';
+  let body = 'Use Settings for normal changes, Mods for Workshop lists, and Advanced only for maintenance or recovery.';
+
+  if (!setupReady) {
+    title = 'Finish setup before hosting.';
+    body = setupTodo.length > 0
+      ? `Next setup item: ${setupTodo[0].label}. ${setupTodo[0].next || 'Open Setup for details.'}`
+      : 'Open Setup and refresh the checklist.';
+  } else if (ready) {
+    title = 'Server is ready for players.';
+    body = 'Players can join with the host public IP, port, and join password. Use Restart + Backup before major config or mod changes.';
+  } else if (running) {
+    title = 'Server is starting.';
+    body = 'Wait a few minutes on first launch. Open Logs if it stays in Starting for more than 8-10 minutes.';
+  } else if (pendingMods > 0 && staged.stagedReady) {
+    title = 'Staged mod updates are ready.';
+    body = 'Apply the staged refresh during a quiet window. Players may still need Steam to update client mods.';
+  } else if (pendingMods > 0) {
+    title = 'Mod updates are available.';
+    body = 'Stage pending updates before applying them so the actual server restart is shorter.';
+  } else {
+    title = 'Server is stopped.';
+    body = 'Use Start after setup is complete. Use Settings first if you need to change the public name, password, ports, or player count.';
+  }
+
+  $('#nextStepTitle').textContent = title;
+  $('#nextStepBody').textContent = body;
 }
 
 function renderHealth() {
@@ -515,6 +599,7 @@ function escapeHtml(value) {
 
 async function refresh() {
   const payload = await api('/api/state');
+  state.statusPayload = payload.status || {};
   state.env = payload.env || {};
   state.settings = payload.settings || {};
   state.mods = payload.mods || [];
@@ -554,12 +639,15 @@ function collectSettings() {
 }
 
 async function runAction(action) {
-  appendOutput(`Running ${action}`);
+  const confirmation = actionConfirmations[action];
+  if (confirmation && !confirm(confirmation)) return;
+  const label = actionLabels[action] || action;
+  appendOutput(`Running ${label}`);
   const result = await api('/api/action', {
     method: 'POST',
     body: JSON.stringify({ action })
   });
-  appendOutput([result.stdout, result.stderr].filter(Boolean).join('\n') || `${action} completed.`);
+  appendOutput([result.stdout, result.stderr].filter(Boolean).join('\n') || `${label} completed.`);
   if (action === 'shutdownPanel') {
     appendOutput('Admin panel closed. Run Open-AdminPanel.ps1 to reopen it.');
     return;
@@ -718,7 +806,6 @@ function bindUi() {
 
   $('#stagePendingModsBtn').addEventListener('click', () => runAction('prepareStagedUpdate').catch((error) => appendOutput(error.message)));
   $('#applyStagedModsBtn').addEventListener('click', () => {
-    if (!confirm('Apply staged refresh now? This warns players, stops the server, swaps staged files in, starts again, and rolls back if health fails.')) return;
     runAction('stagedRefresh').catch((error) => appendOutput(error.message));
   });
 
