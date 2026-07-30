@@ -220,6 +220,9 @@ Add-Check 'Package script excludes local secrets' {
     if ($packageScript -notmatch 'INSTALL-FIRST\.ps1') {
         throw 'Package script must create INSTALL-FIRST.ps1.'
     }
+    if ($packageScript -notmatch 'INSTALL-FIRST\.cmd') {
+        throw 'Package script must create INSTALL-FIRST.cmd.'
+    }
     if ($packageScript -notmatch 'RUN-SETUP-WIZARD\.ps1') {
         throw 'Package script must include the guided setup launcher.'
     }

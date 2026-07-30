@@ -24,6 +24,8 @@ cd C:\src\project-zomboid-server
 
 The GUI setup wizard asks a few questions with defaults, lets the user browse for the runtime folder, installs the server manager, opens the admin panel, and sends the user to the `Setup` checklist. `RUN-SETUP-WIZARD.ps1` and `START-HERE.ps1` are still available as fallback launchers.
 
+If Windows blocks `INSTALL-FIRST.ps1` because it is not digitally signed, use `INSTALL-FIRST.cmd` instead. The `.cmd` launcher starts PowerShell with the local bypass needed for this setup script.
+
 Runtime files default to `C:\pz`. If the C drive is small, enter another runtime folder in the wizard, such as `D:\pz`; SteamCMD, server files, saves, logs, backups, and staging files will be stored under that folder.
 
 If SteamCMD reports `Failed to install app '380870' (Missing configuration)`, rerun the wizard or run `scripts\install\Install-PzServer.ps1`. Current releases retry the Project Zomboid server download automatically.

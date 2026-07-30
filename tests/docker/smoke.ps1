@@ -14,6 +14,7 @@ $required = @(
     'Setup-Wizard.ps1',
     'Open-AdminPanel.ps1',
     'Stop-AdminPanel.ps1',
+    'INSTALL-FIRST.cmd',
     'INSTALL-FIRST.ps1',
     'LICENSE',
     'NOTICE',

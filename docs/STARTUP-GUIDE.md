@@ -11,7 +11,7 @@ This guide is for the person running the server.
 C:\src\project-zomboid-server
 ```
 
-3. Double-click `INSTALL-GUI.cmd`.
+3. Double-click `INSTALL-FIRST.cmd`.
 4. Pick the runtime folder with the Browse button and answer the guided setup questions. Pick the defaults unless you already know you want something different.
 5. The admin panel opens to the setup checklist when the wizard finishes.
 

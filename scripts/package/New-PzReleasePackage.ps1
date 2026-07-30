@@ -32,7 +32,14 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 Set-Location $PSScriptRoot
-.\INSTALL-GUI.ps1
+Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile", "-STA", "-ExecutionPolicy", "Bypass", "-File", (Join-Path $PSScriptRoot "INSTALL-GUI.ps1")
+'@
+
+Set-Content -LiteralPath (Join-Path $stage 'INSTALL-FIRST.cmd') -Encoding ASCII -Value @'
+@echo off
+setlocal
+cd /d "%~dp0"
+call "%~dp0INSTALL-GUI.cmd"
 '@
 
 if (Test-Path -LiteralPath $zip) {

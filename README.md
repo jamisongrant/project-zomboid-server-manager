@@ -37,7 +37,7 @@ C:\src\project-zomboid-server
 Then double-click:
 
 ```text
-INSTALL-GUI.cmd
+INSTALL-FIRST.cmd
 ```
 
 Or run the GUI directly:
