@@ -161,7 +161,7 @@ $startServer.Checked = $true
 $form.Controls.Add($startServer)
 
 $reuseServer = New-Object System.Windows.Forms.CheckBox
-$reuseServer.Text = 'Reuse existing server files if found'
+$reuseServer.Text = 'Reuse existing server files only if valid'
 $reuseServer.Left = 210
 $reuseServer.Top = 326
 $reuseServer.Width = 280

@@ -40,5 +40,10 @@ if (-not (Test-Path -LiteralPath $serverExecutable)) {
     Write-PzLog -Config $config -Message "Server install finished, but the expected startup script was not found yet: ${serverExecutable}." -Name 'install' -Level 'WARN'
 }
 
+$serverJava = Join-Path $config.ServerDir 'jre64\bin\java.exe'
+if (-not (Test-Path -LiteralPath $serverJava)) {
+    throw "Project Zomboid server install did not create the expected Java runtime at ${serverJava}. Check the install log and rerun scripts\install\Install-PzServer.ps1."
+}
+
 Write-PzLog -Config $config -Message "Project Zomboid server install/update complete." -Name 'install'
 

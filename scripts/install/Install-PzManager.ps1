@@ -79,6 +79,13 @@ Set-Content -LiteralPath $configPath -Value $content -Encoding ASCII
 
 & (Join-Path $PSScriptRoot 'Initialize-Directories.ps1')
 
+$serverJava = Join-Path $runtime 'server\jre64\bin\java.exe'
+if ($SkipServerInstall -and -not (Test-Path -LiteralPath $serverJava)) {
+    Write-Host "Existing server files were requested, but the Project Zomboid runtime was not found at $serverJava."
+    Write-Host 'Installing the dedicated server files now.'
+    $SkipServerInstall = $false
+}
+
 if (-not $SkipServerInstall) {
     & (Join-Path $PSScriptRoot 'Install-SteamCmd.ps1')
     & (Join-Path $PSScriptRoot 'Install-PzServer.ps1')

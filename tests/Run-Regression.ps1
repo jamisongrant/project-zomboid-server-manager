@@ -182,6 +182,9 @@ Add-Check 'Installer supports configurable runtime root' {
     if ($installer -notmatch 'PZ_ROOT=\$runtime') {
         throw 'Installer must derive PZ_ROOT from the selected runtime root.'
     }
+    if ($installer -notmatch 'server\\jre64\\bin\\java\.exe' -or $installer -notmatch 'Existing server files were requested') {
+        throw 'Installer must verify server runtime files before honoring SkipServerInstall.'
+    }
 }
 
 Add-Check 'Mod example JSON parses' {
