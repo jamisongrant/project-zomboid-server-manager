@@ -80,6 +80,15 @@ Add-Check 'PowerShell scripts parse' {
     }
 }
 
+Add-Check 'PowerShell scripts avoid newer crypto-only APIs' {
+    $matches = @(Get-ChildItem -Recurse -Filter *.ps1 |
+        Where-Object { $_.FullName -notmatch '\\dist\\' } |
+        Select-String -Pattern 'RandomNumberGenerator\]::Fill')
+    if ($matches.Count -gt 0) {
+        throw 'Use RandomNumberGenerator.Create().GetBytes(...) for Windows PowerShell 5.1 compatibility.'
+    }
+}
+
 Add-Check 'Node admin backend syntax' {
     Invoke-CheckedNative -FilePath 'node' -Arguments @('--check', './tools/admin-panel/server.js')
 }

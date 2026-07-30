@@ -32,7 +32,12 @@ function Read-YesNo {
 
 function New-FriendlyPassword {
     $bytes = New-Object byte[] 9
-    [System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+    $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try {
+        $rng.GetBytes($bytes)
+    } finally {
+        $rng.Dispose()
+    }
     return ('pz-' + [Convert]::ToBase64String($bytes).TrimEnd('=').Replace('+', 'x').Replace('/', 'y'))
 }
 
