@@ -7,6 +7,8 @@ Expand-Archive -LiteralPath '/workspace/package.zip' -DestinationPath $extract -
 Set-Location $extract
 
 $required = @(
+    'INSTALL-GUI.cmd',
+    'INSTALL-GUI.ps1',
     'RUN-SETUP-WIZARD.ps1',
     'START-HERE.ps1',
     'Setup-Wizard.ps1',

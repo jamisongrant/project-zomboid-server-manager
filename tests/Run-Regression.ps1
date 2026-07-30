@@ -89,7 +89,7 @@ Add-Check 'Node admin frontend syntax' {
 }
 
 Add-Check 'Friend launcher scripts exist' {
-    foreach ($script in @('RUN-SETUP-WIZARD.ps1', 'START-HERE.ps1', 'Setup-Wizard.ps1', 'Open-AdminPanel.ps1', 'Stop-AdminPanel.ps1')) {
+    foreach ($script in @('INSTALL-GUI.cmd', 'INSTALL-GUI.ps1', 'RUN-SETUP-WIZARD.ps1', 'START-HERE.ps1', 'Setup-Wizard.ps1', 'Open-AdminPanel.ps1', 'Stop-AdminPanel.ps1')) {
         if (-not (Test-Path -LiteralPath (Join-Path $projectRoot $script))) {
             throw "Missing $script"
         }
@@ -222,6 +222,9 @@ Add-Check 'Package script excludes local secrets' {
     }
     if ($packageScript -notmatch 'RUN-SETUP-WIZARD\.ps1') {
         throw 'Package script must include the guided setup launcher.'
+    }
+    if ($packageScript -notmatch 'INSTALL-GUI\.ps1') {
+        throw 'Package script must include the GUI setup launcher.'
     }
     foreach ($publicFile in @('LICENSE', 'NOTICE', 'SUPPORT.md')) {
         if ($packageScript -notmatch [regex]::Escape("'$publicFile'")) {

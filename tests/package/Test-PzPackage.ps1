@@ -27,6 +27,8 @@ try {
     Set-Location $extractRoot
 
     $required = @(
+        'INSTALL-GUI.cmd',
+        'INSTALL-GUI.ps1',
         'RUN-SETUP-WIZARD.ps1',
         'START-HERE.ps1',
         'Setup-Wizard.ps1',

@@ -19,10 +19,10 @@ Run PowerShell:
 
 ```powershell
 cd C:\src\project-zomboid-server
-.\RUN-SETUP-WIZARD.ps1
+.\INSTALL-GUI.ps1
 ```
 
-The guided setup wizard asks a few questions with defaults, installs the server manager, opens the admin panel, and sends the user to the `Setup` checklist. `START-HERE.ps1` is still available as a browser-first launcher.
+The GUI setup wizard asks a few questions with defaults, lets the user browse for the runtime folder, installs the server manager, opens the admin panel, and sends the user to the `Setup` checklist. `RUN-SETUP-WIZARD.ps1` and `START-HERE.ps1` are still available as fallback launchers.
 
 Runtime files default to `C:\pz`. If the C drive is small, enter another runtime folder in the wizard, such as `D:\pz`; SteamCMD, server files, saves, logs, backups, and staging files will be stored under that folder.
 

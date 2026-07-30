@@ -34,14 +34,20 @@ Download a release zip, extract it to:
 C:\src\project-zomboid-server
 ```
 
-Then run:
+Then double-click:
+
+```text
+INSTALL-GUI.cmd
+```
+
+Or run the GUI directly:
 
 ```powershell
 cd C:\src\project-zomboid-server
-.\RUN-SETUP-WIZARD.ps1
+.\INSTALL-GUI.ps1
 ```
 
-The wizard asks for the runtime folder, server name, join password, player count, memory, firewall/automation options, and whether to start the server. It pre-fills from existing Project Zomboid server files when they are present.
+The GUI wizard asks for the runtime folder, server name, join password, player count, memory, firewall/automation options, and whether to start the server. It includes a folder picker for the runtime location and pre-fills from existing Project Zomboid server files when they are present.
 
 When setup finishes, open:
 

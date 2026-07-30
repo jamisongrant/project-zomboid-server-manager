@@ -15,7 +15,7 @@ if (Test-Path -LiteralPath $stage) {
 }
 New-Item -ItemType Directory -Path $stage -Force | Out-Null
 
-$items = @('.editorconfig', '.github', '.gitignore', 'CONTRIBUTING.md', 'LICENSE', 'NOTICE', 'Open-AdminPanel.ps1', 'README.md', 'RUN-SETUP-WIZARD.ps1', 'SECURITY.md', 'Setup-Wizard.ps1', 'START-HERE.ps1', 'Stop-AdminPanel.ps1', 'SUPPORT.md', 'config', 'docs', 'scripts', 'templates', 'tools', 'tests')
+$items = @('.editorconfig', '.github', '.gitignore', 'CONTRIBUTING.md', 'INSTALL-GUI.cmd', 'INSTALL-GUI.ps1', 'LICENSE', 'NOTICE', 'Open-AdminPanel.ps1', 'README.md', 'RUN-SETUP-WIZARD.ps1', 'SECURITY.md', 'Setup-Wizard.ps1', 'START-HERE.ps1', 'Stop-AdminPanel.ps1', 'SUPPORT.md', 'config', 'docs', 'scripts', 'templates', 'tools', 'tests')
 foreach ($item in $items) {
     $source = Join-Path $projectRoot $item
     if (Test-Path -LiteralPath $source) {
@@ -32,7 +32,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 Set-Location $PSScriptRoot
-.\RUN-SETUP-WIZARD.ps1
+.\INSTALL-GUI.ps1
 '@
 
 if (Test-Path -LiteralPath $zip) {

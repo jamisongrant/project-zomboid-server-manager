@@ -11,8 +11,8 @@ This guide is for the person running the server.
 C:\src\project-zomboid-server
 ```
 
-3. Right-click `RUN-SETUP-WIZARD.ps1` and choose `Run with PowerShell`.
-4. Answer the guided setup questions. Pick the defaults unless you already know you want something different.
+3. Double-click `INSTALL-GUI.cmd`.
+4. Pick the runtime folder with the Browse button and answer the guided setup questions. Pick the defaults unless you already know you want something different.
 5. The admin panel opens to the setup checklist when the wizard finishes.
 
 ```text
@@ -23,10 +23,10 @@ The wizard asks for the runtime folder, server display name, join password, play
 
 If SteamCMD reports `Failed to install app '380870' (Missing configuration)`, run the wizard again or run `scripts\install\Install-PzServer.ps1`. This is usually a temporary SteamCMD update response; the installer retries automatically in current releases.
 
-To open the browser-first launcher instead:
+To launch the PowerShell fallback wizard instead:
 
 ```powershell
-.\START-HERE.ps1
+.\RUN-SETUP-WIZARD.ps1
 ```
 
 ## Normal Use
