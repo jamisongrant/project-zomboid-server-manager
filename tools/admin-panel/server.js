@@ -88,6 +88,17 @@ const actions = {
   disableAutomation: ['scripts\\tasks\\Disable-PzAutomation.ps1']
 };
 
+const settingEnvKeys = {
+  PublicName: 'PZ_PUBLIC_NAME',
+  PublicDescription: 'PZ_PUBLIC_DESCRIPTION',
+  Password: 'PZ_PASSWORD',
+  MaxPlayers: 'PZ_MAX_PLAYERS',
+  DefaultPort: 'PZ_PORT',
+  UDPPort: 'PZ_UDP_PORT',
+  RCONPort: 'PZ_RCON_PORT',
+  RCONPassword: 'PZ_RCON_PASSWORD'
+};
+
 function readEnv() {
   if (!fs.existsSync(envPath)) return {};
   return Object.fromEntries(
@@ -128,6 +139,16 @@ function writeEnv(values) {
   }
 
   fs.writeFileSync(envPath, `${lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()}\n`, 'utf8');
+}
+
+function syncSettingsToEnv(settings) {
+  const envUpdates = {};
+  for (const [settingKey, envKey] of Object.entries(settingEnvKeys)) {
+    if (Object.prototype.hasOwnProperty.call(settings, settingKey)) {
+      envUpdates[envKey] = settings[settingKey] ?? '';
+    }
+  }
+  if (Object.keys(envUpdates).length > 0) writeEnv(envUpdates);
 }
 
 function serverIniPath() {
@@ -476,6 +497,20 @@ function runPowerShell(args) {
 
 function runPowerShellDynamic(scriptPath, extraArgs = []) {
   return runPowerShell([scriptPath, ...extraArgs]);
+}
+
+async function runApplyConfigThenRestart() {
+  const apply = await runPowerShell(actions.applyConfig);
+  if (apply.code !== 0) {
+    return { ...apply, stdout: `Apply Config failed.\n${apply.stdout}` };
+  }
+
+  const restart = await runPowerShell(actions.restart);
+  return {
+    code: restart.code,
+    stdout: [apply.stdout, restart.stdout].filter(Boolean).join('\n'),
+    stderr: [apply.stderr, restart.stderr].filter(Boolean).join('\n')
+  };
 }
 
 function runStatus() {
@@ -896,7 +931,9 @@ async function route(req, res) {
 
     if (req.method === 'POST' && url.pathname === '/api/settings') {
       const body = await readJsonBody(req);
-      writeIni(serverIniPath(), body.settings || {});
+      const settings = body.settings || {};
+      syncSettingsToEnv(settings);
+      writeIni(serverIniPath(), settings);
       sendJson(res, 200, { ok: true, settings: readIni(serverIniPath()).values });
       return;
     }
@@ -950,6 +987,11 @@ async function route(req, res) {
           return;
         }
         const result = await runPowerShellDynamic('scripts\\ops\\Restore-PzBackup.ps1', ['-BackupPath', backup.fullPath, '-Restart']);
+        sendJson(res, result.code === 0 ? 200 : 500, { ok: result.code === 0, ...result });
+        return;
+      }
+      if (body.action === 'applyConfigRestart') {
+        const result = await runApplyConfigThenRestart();
         sendJson(res, result.code === 0 ? 200 : 500, { ok: result.code === 0, ...result });
         return;
       }

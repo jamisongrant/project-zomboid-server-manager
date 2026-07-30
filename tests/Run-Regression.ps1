@@ -210,6 +210,27 @@ Add-Check 'Admin panel action scripts exist' {
     }
 }
 
+Add-Check 'Admin settings persist across apply config' {
+    $serverJs = Get-Content -LiteralPath (Join-Path $projectRoot 'tools/admin-panel/server.js') -Raw
+    $appJs = Get-Content -LiteralPath (Join-Path $projectRoot 'tools/admin-panel/public/app.js') -Raw
+    $index = Get-Content -LiteralPath (Join-Path $projectRoot 'tools/admin-panel/public/index.html') -Raw
+
+    foreach ($mapping in @('PZ_PUBLIC_NAME', 'PZ_PUBLIC_DESCRIPTION', 'PZ_PASSWORD', 'PZ_MAX_PLAYERS', 'PZ_PORT', 'PZ_UDP_PORT')) {
+        if ($serverJs -notmatch [regex]::Escape($mapping)) {
+            throw "Settings saves must sync $mapping into server.env."
+        }
+    }
+    if ($serverJs -notmatch 'applyConfigRestart') {
+        throw 'Admin panel must expose an apply config then restart action.'
+    }
+    if ($index -notmatch 'applyConfigRestart') {
+        throw 'Apply With Restart button must run applyConfigRestart.'
+    }
+    if ($appJs -notmatch 'settingsDirty' -or $appJs -notmatch 'modsDirty' -or $appJs -notmatch 'hasConfigChanges') {
+        throw 'Admin frontend must not auto-refresh over in-progress edits.'
+    }
+}
+
 Add-Check 'Admin static assets are wired' {
     $index = Get-Content -LiteralPath (Join-Path $projectRoot 'tools/admin-panel/public/index.html') -Raw
     foreach ($asset in @('styles.css', 'app.js')) {

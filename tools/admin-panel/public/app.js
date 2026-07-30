@@ -12,7 +12,9 @@ const state = {
   configFiles: { ini: { entries: [], raw: '', path: '' }, sandbox: { entries: [], raw: '', path: '' } },
   activeConfigFile: 'ini',
   configChanges: {},
-  wizardSeeded: false
+  wizardSeeded: false,
+  settingsDirty: false,
+  modsDirty: false
 };
 
 const boolKeys = new Set([
@@ -99,6 +101,7 @@ function renderHealth() {
 }
 
 function renderSettings() {
+  if (state.settingsDirty || $('#settingsForm')?.contains(document.activeElement)) return;
   const form = $('#settingsForm');
   for (const input of [...form.elements]) {
     if (!input.name) continue;
@@ -249,6 +252,7 @@ async function runSetupWizardInstall() {
 }
 
 function renderMods() {
+  if (state.modsDirty || $('#modList')?.contains(document.activeElement) || document.activeElement === $('#modLoadOrder')) return;
   const list = $('#modList');
   list.innerHTML = '';
   const pendingMods = state.mods.filter((mod) => mod.enabled && mod.needsUpdate);
@@ -283,10 +287,12 @@ function renderMods() {
     list.appendChild(row);
     row.querySelectorAll('[data-field]').forEach((input) => {
       input.addEventListener('input', () => {
+        state.modsDirty = true;
         const field = input.dataset.field;
         state.mods[index][field] = input.type === 'checkbox' ? input.checked : input.value;
       });
       input.addEventListener('change', () => {
+        state.modsDirty = true;
         const field = input.dataset.field;
         state.mods[index][field] = input.type === 'checkbox' ? input.checked : input.value;
       });
@@ -440,10 +446,18 @@ function renderConfigFiles() {
 }
 
 async function loadConfigFiles(render = true) {
+  if (hasConfigChanges()) {
+    if (render) renderConfigFiles();
+    return;
+  }
   const result = await api('/api/config-files');
   state.configFiles = result.files || state.configFiles;
   state.configChanges = {};
   if (render) renderConfigFiles();
+}
+
+function hasConfigChanges() {
+  return Object.values(state.configChanges || {}).some((bucket) => Object.keys(bucket || {}).length > 0);
 }
 
 async function saveConfigChanges() {
@@ -614,7 +628,7 @@ function bindUi() {
         body: JSON.stringify({ settings: collectSettings() })
       });
       state.settings = result.settings;
-      appendOutput('Settings saved.');
+      state.settingsDirty = false;
       await api('/api/env', {
         method: 'POST',
         body: JSON.stringify({
@@ -626,6 +640,7 @@ function bindUi() {
           }
         })
       });
+      appendOutput('Settings saved.');
       await refresh();
     } catch (error) {
       appendOutput(error.message);
@@ -641,6 +656,10 @@ function bindUi() {
     button.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
     button.classList.toggle('revealed', isHidden);
   });
+
+  $('#settingsForm').addEventListener('input', () => { state.settingsDirty = true; });
+  $('#settingsForm').addEventListener('change', () => { state.settingsDirty = true; });
+  $('#modLoadOrder').addEventListener('input', () => { state.modsDirty = true; });
 
   $('#iniConfigBtn').addEventListener('click', () => {
     state.activeConfigFile = 'ini';
@@ -660,6 +679,7 @@ function bindUi() {
   });
 
   $('#addModBtn').addEventListener('click', () => {
+    state.modsDirty = true;
     state.mods.push({ name: '', workshopId: '', modId: '', enabled: true, notes: '' });
     renderMods();
   });
@@ -676,6 +696,7 @@ function bindUi() {
       state.mods = result.mods;
       state.modLoadOrder = result.modLoadOrder || [];
       state.settings = result.settings;
+      state.modsDirty = false;
       appendOutput('Mods saved to server.ini.');
       renderMods();
     } catch (error) {
