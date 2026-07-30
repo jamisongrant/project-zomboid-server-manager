@@ -75,6 +75,12 @@ Close only the admin panel:
 
 Closing the admin panel does not stop the Project Zomboid server.
 
+## Updating
+
+Run the latest `PzManagerSetup-*.exe` and choose the existing manager install folder. Existing local config, mod state, runtime files, saves, logs, backups, and staging files are preserved; the installer opens the admin panel instead of rerunning first-time setup.
+
+Use the installer for updates. The zip is intended for manual inspection or recovery, not for extracting over an existing install.
+
 ## Admin Panel Controls
 
 - `Overview`: server status, player count, recent health, and primary actions

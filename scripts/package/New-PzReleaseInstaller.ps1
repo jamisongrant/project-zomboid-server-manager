@@ -68,10 +68,17 @@ if ([System.IO.Path]::GetFileName($selectedPath) -ieq 'project-zomboid-server-ma
     $installDir = Join-Path $selectedPath 'project-zomboid-server-manager'
 }
 
+$existingConfig = Join-Path $installDir 'config\server.env'
+$isUpdate = Test-Path -LiteralPath $existingConfig
 if ((Test-Path -LiteralPath $installDir) -and
     @(Get-ChildItem -LiteralPath $installDir -Force -ErrorAction SilentlyContinue).Count -gt 0) {
+    $prompt = if ($isUpdate) {
+        "Existing Project Zomboid Server Manager config was found:`n`n$existingConfig`n`nUpdate only the manager app files?`n`nThis preserves runtime files, saves, backups, mods, and local server config."
+    } else {
+        "Install folder already exists:`n`n$installDir`n`nUpdate files in this folder?"
+    }
     $choice = [System.Windows.Forms.MessageBox]::Show(
-        "Install folder already exists:`n`n$installDir`n`nUpdate files in this folder?",
+        $prompt,
         'Project Zomboid Server Manager',
         [System.Windows.Forms.MessageBoxButtons]::YesNo,
         [System.Windows.Forms.MessageBoxIcon]::Question
@@ -82,21 +89,62 @@ if ((Test-Path -LiteralPath $installDir) -and
 }
 
 New-Item -ItemType Directory -Path $installDir -Force | Out-Null
-Expand-Archive -LiteralPath $PackageZip -DestinationPath $installDir -Force
+$preserveRoot = Join-Path ([System.IO.Path]::GetTempPath()) "pz-manager-preserve-$(Get-Date -Format yyyyMMddHHmmss)"
+$preservedItems = @(
+    'config\server.env',
+    'config\mods.json'
+)
 
-$launcher = Join-Path $installDir 'INSTALL-FIRST.cmd'
-if (-not (Test-Path -LiteralPath $launcher)) {
-    throw "Installer did not find INSTALL-FIRST.cmd after extraction: $launcher"
+try {
+    foreach ($relative in $preservedItems) {
+        $source = Join-Path $installDir $relative
+        if (Test-Path -LiteralPath $source) {
+            $target = Join-Path $preserveRoot $relative
+            New-Item -ItemType Directory -Path (Split-Path -Parent $target) -Force | Out-Null
+            Copy-Item -LiteralPath $source -Destination $target -Force
+        }
+    }
+
+    Expand-Archive -LiteralPath $PackageZip -DestinationPath $installDir -Force
+
+    foreach ($relative in $preservedItems) {
+        $source = Join-Path $preserveRoot $relative
+        if (Test-Path -LiteralPath $source) {
+            $target = Join-Path $installDir $relative
+            New-Item -ItemType Directory -Path (Split-Path -Parent $target) -Force | Out-Null
+            Copy-Item -LiteralPath $source -Destination $target -Force
+        }
+    }
+} finally {
+    Remove-Item -LiteralPath $preserveRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
 
+$launcher = if ($isUpdate) {
+    Join-Path $installDir 'Open-AdminPanel.ps1'
+} else {
+    Join-Path $installDir 'INSTALL-FIRST.cmd'
+}
+if (-not (Test-Path -LiteralPath $launcher)) {
+    throw "Installer did not find expected launcher after extraction: $launcher"
+}
+
+$message = if ($isUpdate) {
+    "Updated manager files in:`n`n$installDir`n`nLocal server config, mods, runtime files, saves, logs, and backups were preserved. The admin panel will open next."
+} else {
+    "Installed to:`n`n$installDir`n`nThe setup wizard will open next."
+}
 [System.Windows.Forms.MessageBox]::Show(
-    "Installed to:`n`n$installDir`n`nThe setup wizard will open next.",
+    $message,
     'Project Zomboid Server Manager',
     [System.Windows.Forms.MessageBoxButtons]::OK,
     [System.Windows.Forms.MessageBoxIcon]::Information
 ) | Out-Null
 
-Start-Process -FilePath $launcher -WorkingDirectory $installDir
+if ($isUpdate) {
+    Start-Process -FilePath 'powershell.exe' -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $launcher -WorkingDirectory $installDir
+} else {
+    Start-Process -FilePath $launcher -WorkingDirectory $installDir
+}
 '@
 
 $escapedPayloadRoot = $payloadRoot.Replace('\', '\\')

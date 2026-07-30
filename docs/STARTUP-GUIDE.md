@@ -54,6 +54,12 @@ Health > Close Admin Panel
 
 Closing the admin panel does not stop the Project Zomboid server.
 
+## Updating The Manager
+
+Download the latest `PzManagerSetup-*.exe` and choose the same manager install folder. When local config already exists, the installer updates only the manager app files, preserves `config\server.env`, `config\mods.json`, runtime files, saves, logs, backups, and staging files, then opens the admin panel instead of rerunning first-time setup.
+
+Do not update by extracting the zip over an existing install. Use the installer so local config and mod state are preserved.
+
 ## First Mod Activation
 
 If you add a large mod pack, the server may show `Starting` for several minutes while Project Zomboid downloads Workshop items. This is normal. The server is ready when the badge changes to `Ready`.

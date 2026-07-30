@@ -283,6 +283,22 @@ Add-Check 'Windows installer builder is present' {
     }
 }
 
+Add-Check 'Windows installer update path preserves local state' {
+    $installerScript = Get-Content -LiteralPath (Join-Path $projectRoot 'scripts/package/New-PzReleaseInstaller.ps1') -Raw
+    foreach ($required in @(
+        'config\server.env',
+        'config\mods.json',
+        'Open-AdminPanel.ps1',
+        'INSTALL-FIRST.cmd',
+        'runtime files, saves, logs, and backups were preserved',
+        'Copy-Item -LiteralPath $source -Destination $target -Force'
+    )) {
+        if ($installerScript -notmatch [regex]::Escape($required)) {
+            throw "Installer update path must include: $required"
+        }
+    }
+}
+
 Add-Check 'Friend docs are present' {
     foreach ($doc in @('README.md', 'docs/STARTUP-GUIDE.md', 'docs/friend-install.md', 'docs/release-checklist.md', 'SECURITY.md', 'SUPPORT.md', 'LICENSE', 'NOTICE')) {
         if (-not (Test-Path -LiteralPath (Join-Path $projectRoot $doc))) {

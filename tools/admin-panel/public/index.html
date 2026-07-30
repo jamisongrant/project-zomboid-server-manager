@@ -29,8 +29,8 @@
       <button class="nav" data-tab="health">Health</button>
       <button class="nav" data-tab="backups">Backups</button>
       <button class="nav" data-tab="logViewer">Logs</button>
-      <button class="nav" data-tab="ops">Ops</button>
-      <button class="nav" data-tab="logs">Output</button>
+      <button class="nav" data-tab="ops">Advanced</button>
+      <button class="nav" data-tab="logs">Activity</button>
     </aside>
 
     <section class="panel active" id="overview">
@@ -45,9 +45,6 @@
         <button data-action="stop">Stop</button>
         <button data-action="restart">Restart + Backup</button>
         <button data-action="smartRefreshMods">Smart Mod Refresh</button>
-        <button data-action="prepareStagedUpdate">Prepare Staged Update</button>
-        <button data-action="stagedRefresh">Staged Refresh</button>
-        <button data-action="watchdog">Watchdog</button>
       </div>
     </section>
 
@@ -183,6 +180,12 @@
     </section>
 
     <section class="panel" id="ops">
+      <div class="setup-header">
+        <div>
+          <h2>Advanced Actions</h2>
+          <p>Maintenance, recovery, automation, and staged update controls.</p>
+        </div>
+      </div>
       <div class="ops-grid">
         <button data-action="backup">Backup Saves</button>
         <button data-action="update">Update</button>
