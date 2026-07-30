@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PZ Admin</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Project Zomboid Admin</h1>
+      <p id="subtitle">My Project Zomboid Server</p>
+    </div>
+    <div class="status-strip">
+      <span id="runBadge" class="badge">Checking</span>
+      <span id="pidBadge" class="muted">PID</span>
+      <button id="refreshBtn" class="icon-button" title="Refresh">↻</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="rail">
+      <button class="nav active" data-tab="overview">Overview</button>
+      <button class="nav" data-tab="setup">Setup</button>
+      <button class="nav" data-tab="settings">Settings</button>
+      <button class="nav" data-tab="configFiles">Config</button>
+      <button class="nav" data-tab="mods">Mods</button>
+      <button class="nav" data-tab="health">Health</button>
+      <button class="nav" data-tab="backups">Backups</button>
+      <button class="nav" data-tab="logViewer">Logs</button>
+      <button class="nav" data-tab="ops">Ops</button>
+      <button class="nav" data-tab="logs">Output</button>
+    </aside>
+
+    <section class="panel active" id="overview">
+      <div class="metrics">
+        <div class="metric"><span>Server</span><strong id="serverName">-</strong></div>
+        <div class="metric"><span>Players</span><strong id="maxPlayers">-</strong></div>
+        <div class="metric"><span>Ports</span><strong id="ports">-</strong></div>
+        <div class="metric"><span>Memory</span><strong id="memory">-</strong></div>
+      </div>
+      <div class="action-row">
+        <button class="primary" data-action="start">Start</button>
+        <button data-action="stop">Stop</button>
+        <button data-action="restart">Restart + Backup</button>
+        <button data-action="smartRefreshMods">Smart Mod Refresh</button>
+        <button data-action="prepareStagedUpdate">Prepare Staged Update</button>
+        <button data-action="stagedRefresh">Staged Refresh</button>
+        <button data-action="watchdog">Watchdog</button>
+      </div>
+    </section>
+
+    <section class="panel" id="setup">
+      <div class="setup-header">
+        <div>
+          <h2>Setup Checklist</h2>
+          <p id="setupSummary">Checking local setup...</p>
+        </div>
+        <div class="action-row">
+          <button id="launchSetupWizardBtn" type="button">Launch Setup Wizard</button>
+          <button id="refreshSetupBtn" type="button">Refresh Check</button>
+        </div>
+      </div>
+      <div id="setupList" class="setup-list"></div>
+    </section>
+
+    <section class="panel" id="settings">
+      <form id="settingsForm" class="grid-form">
+        <label>Public name<input name="PublicName"></label>
+        <label>Description<input name="PublicDescription"></label>
+        <label>Join password
+          <span class="password-field">
+            <input id="joinPasswordInput" name="Password" type="password" autocomplete="current-password">
+            <button id="toggleJoinPassword" type="button" class="icon-button inline-eye" title="Show password" aria-label="Show password">
+              <span class="eye-icon" aria-hidden="true"></span>
+            </button>
+          </span>
+        </label>
+        <label>Max players<input name="MaxPlayers" type="number" min="1" max="100"></label>
+        <label>Game port<input name="DefaultPort" type="number"></label>
+        <label>UDP port<input name="UDPPort" type="number"></label>
+        <label>Map<input name="Map"></label>
+        <label>Backup count<input name="BackupsCount" type="number" min="0"></label>
+        <label>Refresh warning seconds<input id="modWarningSeconds" type="number" min="0"></label>
+        <label>Refresh window start<input id="modWindowStart" type="time"></label>
+        <label>Refresh window end<input id="modWindowEnd" type="time"></label>
+        <label class="check"><input name="Public" type="checkbox"> Public listing</label>
+        <label class="check"><input name="Open" type="checkbox"> Open whitelist</label>
+        <label class="check"><input name="PVP" type="checkbox"> PVP</label>
+        <label class="check"><input name="PauseEmpty" type="checkbox"> Pause empty</label>
+        <label class="check"><input name="SteamVAC" type="checkbox"> Steam VAC</label>
+        <label class="check"><input name="VoiceEnable" type="checkbox"> Voice</label>
+        <label class="check"><input id="autoRefreshMods" type="checkbox"> Auto refresh mods</label>
+      </form>
+      <div class="action-row">
+        <button class="primary" id="saveSettingsBtn">Save Settings</button>
+        <button data-action="restart">Apply With Restart</button>
+      </div>
+    </section>
+
+    <section class="panel" id="configFiles">
+      <div class="config-toolbar">
+        <div class="segmented">
+          <button id="iniConfigBtn" class="active" type="button">Server INI</button>
+          <button id="sandboxConfigBtn" type="button">Sandbox Vars</button>
+        </div>
+        <input id="configSearch" class="toolbar-search" placeholder="Search settings, comments, sections">
+        <button id="reloadConfigBtn" type="button">Reload</button>
+        <label class="file-import">Import File<input id="configImportInput" type="file" accept=".ini,.lua,.txt"></label>
+        <button id="saveConfigBtn" class="primary" type="button">Save Changes</button>
+      </div>
+      <div class="config-summary">
+        <span id="configFileLabel">No config loaded</span>
+        <strong id="configChangeCount">0 changes</strong>
+      </div>
+      <div id="configList" class="config-list"></div>
+      <details class="raw-config">
+        <summary>Raw file preview</summary>
+        <pre id="configRaw"></pre>
+      </details>
+    </section>
+
+    <section class="panel" id="mods">
+      <div class="mod-toolbar">
+        <button id="addModBtn" class="primary">Add Mod</button>
+        <button id="saveModsBtn">Save Mods</button>
+        <button id="checkModsBtn">Check Updates</button>
+        <button data-action="refreshMods">Refresh Mods</button>
+        <button data-action="smartRefreshMods">Smart Refresh</button>
+      </div>
+      <div class="mod-summary">
+        <span id="modHealth">No mod check yet</span>
+      </div>
+      <div class="pending-panel">
+        <div>
+          <strong id="pendingModCount">0 pending updates</strong>
+          <span id="pendingModHelp">Check Workshop metadata to see whether enabled mods changed upstream.</span>
+        </div>
+        <div class="action-row">
+          <button id="stagePendingModsBtn" type="button">Stage Pending Updates</button>
+          <button id="applyStagedModsBtn" type="button">Apply Staged Refresh</button>
+        </div>
+      </div>
+      <div id="pendingModList" class="pending-list"></div>
+      <div class="mod-summary" id="preflightSummary">Preflight not loaded</div>
+      <div id="modList" class="mod-list"></div>
+      <label class="load-order">Mod ID load order<textarea id="modLoadOrder" spellcheck="false"></textarea></label>
+    </section>
+
+    <section class="panel" id="health">
+      <div class="metrics">
+        <div class="metric"><span>Players</span><strong id="playerCount">-</strong></div>
+        <div class="metric"><span>Watchdog</span><strong id="watchdogState">-</strong></div>
+        <div class="metric"><span>Backups</span><strong id="backupCount">-</strong></div>
+        <div class="metric"><span>Mod Preflight</span><strong id="preflightState">-</strong></div>
+        <div class="metric"><span>Staged Update</span><strong id="stagedUpdateState">-</strong></div>
+      </div>
+      <div class="action-row">
+        <button data-action="watchdog">Run Watchdog</button>
+        <button data-action="enableAutomation">Enable Automation</button>
+        <button data-action="disableAutomation">Disable Automation</button>
+        <button data-action="shutdownPanel">Close Admin Panel</button>
+        <button data-action="installFirewallRules">Install Firewall Rules</button>
+        <button data-action="smartRefreshMods">Smart Mod Refresh</button>
+      </div>
+      <div class="path-list" id="healthDetails"></div>
+    </section>
+
+    <section class="panel" id="backups">
+      <div class="action-row">
+        <button data-action="backup">Backup Saves</button>
+        <button id="refreshBackupsBtn">Refresh Backups</button>
+      </div>
+      <div id="backupList" class="backup-list"></div>
+    </section>
+
+    <section class="panel" id="logViewer">
+      <div class="log-layout">
+        <div id="logList" class="log-list"></div>
+        <pre id="logContent"></pre>
+      </div>
+    </section>
+
+    <section class="panel" id="ops">
+      <div class="ops-grid">
+        <button data-action="backup">Backup Saves</button>
+        <button data-action="update">Update</button>
+        <button data-action="updateMods">Update Mods</button>
+        <button data-action="refreshMods">Refresh Mods</button>
+        <button data-action="smartRefreshMods">Smart Refresh</button>
+        <button data-action="prepareStagedUpdate">Prepare Staged Update</button>
+        <button data-action="stagedRefresh">Staged Refresh</button>
+        <button data-action="rollbackStagedUpdate">Rollback Staged Update</button>
+        <button data-action="enableAutomation">Enable Automation</button>
+        <button data-action="disableAutomation">Disable Automation</button>
+        <button data-action="shutdownPanel">Close Panel</button>
+        <button data-action="installFirewallRules">Firewall Rules</button>
+        <button data-action="applyConfig">Apply Config</button>
+        <button data-action="pruneBackups">Prune Backups</button>
+      </div>
+      <div class="path-list">
+        <div><span>Env</span><code id="envPath"></code></div>
+        <div><span>Server ini</span><code id="iniPath"></code></div>
+        <div><span>Mods</span><code id="modsPath"></code></div>
+      </div>
+    </section>
+
+    <section class="panel" id="logs">
+      <pre id="output"></pre>
+    </section>
+  </main>
+
+  <div id="setupModal" class="modal-backdrop" hidden>
+    <div class="modal setup-modal" role="dialog" aria-modal="true" aria-labelledby="setupWizardTitle">
+      <div class="modal-header">
+        <div>
+          <h2 id="setupWizardTitle">Setup Wizard</h2>
+          <p id="setupWizardSubtitle">Pick a few basics. Defaults are fine.</p>
+        </div>
+        <button id="closeSetupWizardBtn" class="icon-button" type="button" title="Close">×</button>
+      </div>
+
+      <form id="setupWizardForm" class="wizard-form">
+        <div class="wizard-prefill-note">Prefilled from the active server config when available. You can adjust anything before installing.</div>
+        <label>Server name<input id="wizardPublicName" value="Project Zomboid Server" maxlength="80"></label>
+        <label>Join password
+          <span class="password-field">
+            <input id="wizardJoinPassword" type="password" autocomplete="new-password" maxlength="80">
+            <button id="toggleWizardPassword" type="button" class="icon-button inline-eye" title="Show password" aria-label="Show password">
+              <span class="eye-icon" aria-hidden="true"></span>
+            </button>
+          </span>
+        </label>
+        <label>Max players<input id="wizardMaxPlayers" type="number" min="1" max="100" value="8"></label>
+        <label>Memory preset
+          <select id="wizardMemoryPreset">
+            <option value="normal" selected>Normal - 4 GB</option>
+            <option value="low">Low - 3 GB</option>
+            <option value="large">Large - 8 GB</option>
+          </select>
+        </label>
+        <label class="check"><input id="wizardStartServer" type="checkbox" checked> Start server after setup</label>
+        <label class="check"><input id="wizardReuseServer" type="checkbox"> Reuse existing server files if present</label>
+        <label class="check"><input id="wizardInternetHosting" type="checkbox"> Internet hosting helper</label>
+        <label class="check"><input id="wizardFirewall" type="checkbox"> Install Windows Firewall rules</label>
+        <label class="check"><input id="wizardAutomation" type="checkbox"> Enable scheduled automation</label>
+      </form>
+
+      <div id="setupWizardNote" class="wizard-note"></div>
+      <pre id="setupWizardOutput" class="wizard-output"></pre>
+
+      <div class="modal-actions">
+        <button id="setupWizardCancelBtn" type="button">Cancel</button>
+        <button id="setupWizardInstallBtn" class="primary" type="button">Install And Open Setup</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

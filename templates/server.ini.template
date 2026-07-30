@@ -1,0 +1,14 @@
+PublicName={{PZ_PUBLIC_NAME}}
+PublicDescription={{PZ_PUBLIC_DESCRIPTION}}
+Password={{PZ_PASSWORD}}
+MaxPlayers={{PZ_MAX_PLAYERS}}
+DefaultPort={{PZ_PORT}}
+UDPPort={{PZ_UDP_PORT}}
+RCONPort={{PZ_RCON_PORT}}
+RCONPassword={{PZ_RCON_PASSWORD}}
+PauseEmpty=true
+Public=false
+Open=true
+Mods=
+Map=Muldraugh, KY
+WorkshopItems=

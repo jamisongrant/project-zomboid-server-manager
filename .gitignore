@@ -1,0 +1,24 @@
+# Local config and secrets
+config/server.env
+config/mods.json
+*.local
+*.secret
+
+# Runtime artifacts belong in C:\pz, not this repo.
+pz/
+runtime/
+server/
+steamcmd/
+saves/
+backups/
+logs/
+state/
+staging/
+
+# Editor and OS noise
+.vscode/
+.idea/
+dist/
+tests/docker/package.zip
+Thumbs.db
+Desktop.ini

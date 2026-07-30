@@ -1,0 +1,8 @@
+[
+  {
+    "name": "Example mod",
+    "workshopId": "123456789",
+    "modId": "ExampleMod",
+    "enabled": false
+  }
+]
