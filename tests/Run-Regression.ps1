@@ -231,6 +231,20 @@ Add-Check 'Admin settings persist across apply config' {
     }
 }
 
+Add-Check 'Admin persistence test exists' {
+    $testPath = Join-Path $projectRoot 'tests/admin-panel/Test-AdminPanelPersistence.ps1'
+    if (-not (Test-Path -LiteralPath $testPath)) {
+        throw 'Missing admin panel persistence test.'
+    }
+
+    $test = Get-Content -LiteralPath $testPath -Raw
+    foreach ($required in @('/api/settings', '/api/config-files', '/api/mods', 'PZ_PUBLIC_NAME=After Name', 'WorkshopItems=123456')) {
+        if ($test -notmatch [regex]::Escape($required)) {
+            throw "Admin persistence test must cover $required."
+        }
+    }
+}
+
 Add-Check 'Admin static assets are wired' {
     $index = Get-Content -LiteralPath (Join-Path $projectRoot 'tools/admin-panel/public/index.html') -Raw
     foreach ($asset in @('styles.css', 'app.js')) {
@@ -410,6 +424,10 @@ if (-not $SkipLiveApi) {
         if ($result.files.sandbox.exists -and @($result.files.sandbox.entries).Count -lt 50) {
             throw 'Sandbox parser returned too few entries.'
         }
+    }
+
+    Add-Check 'Admin API persistence endpoints retain edits' {
+        & (Join-Path $projectRoot 'tests/admin-panel/Test-AdminPanelPersistence.ps1') -BaseUrl 'http://127.0.0.1:18787' -StartPanel
     }
 }
 

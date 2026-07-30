@@ -46,6 +46,7 @@ try {
         'docs\friend-install.md',
         'scripts\install\Install-PzManager.ps1',
         'scripts\tasks\Disable-PzAutomation.ps1',
+        'tests\admin-panel\Test-AdminPanelPersistence.ps1',
         'tools\admin-panel\server.js',
         'tools\admin-panel\public\app.js',
         'tests\Run-Regression.ps1'

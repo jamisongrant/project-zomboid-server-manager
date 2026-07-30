@@ -78,3 +78,38 @@ Use this file as the readiness checklist while building the server.
 - Confirm Windows Firewall allows inbound Project Zomboid traffic.
 - Confirm logs are written to `C:\pz\logs`.
 - Confirm `config\server.env` remains ignored by Git.
+# Validation
+
+Run the full local regression suite:
+
+```powershell
+.\tests\Run-Regression.ps1
+```
+
+This validates script parsing, admin panel syntax, packaging safety, live admin API health, setup checks, config parsing, and admin API persistence.
+
+Run the focused admin persistence test:
+
+```powershell
+.\tests\admin-panel\Test-AdminPanelPersistence.ps1 -BaseUrl "http://127.0.0.1:18787" -StartPanel
+```
+
+This starts an isolated admin panel instance, writes temporary local config, then verifies:
+
+- `POST /api/settings` persists `server.ini` values and syncs matching `server.env` values.
+- `POST /api/config-files` persists targeted line edits.
+- `POST /api/mods` persists `config\mods.json` and syncs `WorkshopItems` / `Mods`.
+- The original local `config\server.env` and `config\mods.json` are restored afterward.
+
+Validate a release zip:
+
+```powershell
+.\scripts\package\New-PzReleasePackage.ps1
+.\tests\package\Test-PzPackage.ps1
+```
+
+Validate the package in Docker when available:
+
+```powershell
+.\tests\docker\Test-PzPackageInDocker.ps1
+```
