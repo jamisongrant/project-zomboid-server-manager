@@ -21,6 +21,8 @@ http://127.0.0.1:8787
 
 The wizard asks for the server display name, join password, player count, memory, and whether to start the server. When active server config files already exist, the wizard pre-fills from those values. If PowerShell is running as Administrator, it can also offer firewall rules and scheduled automation. You can change these later from the admin panel.
 
+If SteamCMD reports `Failed to install app '380870' (Missing configuration)`, run the wizard again or run `scripts\install\Install-PzServer.ps1`. This is usually a temporary SteamCMD update response; the installer retries automatically in current releases.
+
 To open the browser-first launcher instead:
 
 ```powershell

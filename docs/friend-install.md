@@ -24,6 +24,8 @@ cd C:\src\project-zomboid-server
 
 The guided setup wizard asks a few questions with defaults, installs the server manager, opens the admin panel, and sends the user to the `Setup` checklist. `START-HERE.ps1` is still available as a browser-first launcher.
 
+If SteamCMD reports `Failed to install app '380870' (Missing configuration)`, rerun the wizard or run `scripts\install\Install-PzServer.ps1`. Current releases retry the Project Zomboid server download automatically.
+
 For a mostly automatic install, run PowerShell as Administrator and use:
 
 ```powershell
