@@ -42,6 +42,7 @@ const actionLabels = {
   stagedRefresh: 'Apply staged refresh',
   rollbackStagedUpdate: 'Rollback staged update',
   backup: 'Backup saves',
+  restoreBackup: 'Restore backup',
   update: 'Update server files',
   updateMods: 'Update mods',
   refreshMods: 'Refresh mods',
@@ -85,6 +86,7 @@ const actionDescriptions = {
   stagedRefresh: 'Applies the already prepared staged update. Use Stage Pending Updates or Prepare Staged Update first.',
   rollbackStagedUpdate: 'Reverts to the previous staged server copy if a staged refresh broke startup or mod loading.',
   backup: 'Creates a save backup now. Use before mod changes, config edits, or updates.',
+  restoreBackup: 'Stops the server, protects the current save with a pre-restore backup, restores the selected save, then starts the server.',
   update: 'Runs SteamCMD validation/update for the dedicated server files. May require restart before use.',
   updateMods: 'Downloads enabled Workshop items from config\\mods.json. It does not decide whether the server should restart.',
   refreshMods: 'Updates Workshop mods, backs up saves, and restarts so Project Zomboid loads the refreshed mod files.',
@@ -240,6 +242,7 @@ function renderHealth() {
   renderRestartJustification();
   renderAutomationDailyPanel();
   renderAutomationStatus();
+  renderRestoreProgress();
 }
 
 function formatDate(value) {
@@ -815,10 +818,36 @@ function renderPendingMods(pendingMods, checkedCount) {
   }
 }
 
+function renderRestoreProgress() {
+  const panel = $('#restoreProgress');
+  if (!panel) return;
+  const restore = state.health?.restoreProgress;
+  if (!restore) {
+    panel.innerHTML = '<div class="empty-row">No restore is currently recorded.</div>';
+    return;
+  }
+
+  const active = restore.phase && !['succeeded', 'failed'].includes(restore.phase);
+  panel.innerHTML = `
+    <div class="progress-heading">
+      ${statusPill(restore.phase || 'unknown', phaseTone(restore.phase))}
+      <strong>${escapeHtml(restore.status || 'Restore status has not reported yet.')}</strong>
+    </div>
+    ${renderProgressBar(restore)}
+    <div class="status-table">
+      <div><span>Selected backup</span><code>${escapeHtml(restore.backupPath || '-')}</code></div>
+      <div><span>Last update</span><code>${escapeHtml(formatDate(restore.updatedAt))}</code></div>
+      <div><span>Active</span><code>${active ? 'Yes' : 'No'}</code></div>
+      ${restore.lastError ? `<div><span>Last error</span><code>${escapeHtml(restore.lastError)}</code></div>` : ''}
+    </div>
+  `;
+}
+
 function renderBackups() {
   const list = $('#backupList');
   const grooming = state.health?.backupGrooming || {};
   $('#backupForecast').textContent = `Retention ${grooming.retentionDays ?? '-'} days. ${grooming.eligibleCount || 0} backup${grooming.eligibleCount === 1 ? '' : 's'} eligible now. Next scheduled deletion: ${formatDate(grooming.nextDeleteAt)}.`;
+  renderRestoreProgress();
   if (!state.backups.length) {
     list.innerHTML = '<div class="empty-row">No save backups found.</div>';
     return;
@@ -826,7 +855,7 @@ function renderBackups() {
   list.innerHTML = state.backups.map((backup) => `
     <div class="backup-row">
       <div><strong>${escapeHtml(backup.name)}</strong><span>${new Date(backup.modified).toLocaleString()} · ${formatBytes(backup.size)}</span></div>
-      <button data-restore="${escapeHtml(backup.name)}">Restore</button>
+      <button data-restore="${escapeHtml(backup.name)}" ${Number(backup.size || 0) <= 0 ? 'disabled title="0 byte backups cannot be restored."' : ''}>Restore</button>
     </div>
   `).join('');
   list.querySelectorAll('[data-restore]').forEach((button) => {
@@ -1147,8 +1176,13 @@ async function runRestore(name) {
     method: 'POST',
     body: JSON.stringify({ action: 'restoreBackup', name })
   });
-  const jobLine = result.job ? `Job ${result.job.status}: ${result.job.summary}` : '';
-  appendOutput([jobLine, result.stdout, result.stderr].filter(Boolean).join('\n') || 'Restore completed.');
+  if (result.accepted && result.job?.id) {
+    appendOutput(`Restore started in the background. Job ${result.job.id}.`);
+    setActionBusy('restoreBackup', true);
+    await pollActionJob(result.job.id, 'restoreBackup', 'Restore backup');
+    return;
+  }
+  appendOutput([result.stdout, result.stderr].filter(Boolean).join('\n') || 'Restore completed.');
   await refresh();
 }
 

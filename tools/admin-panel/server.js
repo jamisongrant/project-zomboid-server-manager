@@ -1206,6 +1206,7 @@ function systemHealth() {
   const modUpdate = readJsonIfExists(path.join(stateDir, 'mod-update.json'));
   const stagedProgress = readJsonIfExists(path.join(stateDir, 'staged-update-progress.json'));
   const automationMaintenance = readJsonIfExists(path.join(stateDir, 'automation-maintenance.json'));
+  const restoreProgress = readJsonIfExists(path.join(stateDir, 'restore-progress.json'));
   const stagedReady = fs.existsSync(stagedServerDir);
   return {
     watchdog: readJsonIfExists(statusPath),
@@ -1217,6 +1218,7 @@ function systemHealth() {
     backupGrooming: backupGroomingSummary(),
     logGrooming: logGroomingSummary(),
     modUpdate,
+    restoreProgress,
     automationMaintenance,
     restartRecommendation: buildRestartRecommendation(modUpdate, stagedProgress, stagedReady),
     stagedUpdate: {
@@ -1543,8 +1545,12 @@ async function route(req, res) {
           sendJson(res, 404, { ok: false, error: 'Backup not found.' });
           return;
         }
-        const result = await runTrackedAction('restoreBackup', () => runPowerShellDynamic('scripts\\ops\\Restore-PzBackup.ps1', ['-BackupPath', backup.fullPath, '-Restart']));
-        sendJson(res, result.code === 0 ? 200 : 500, { ok: result.code === 0, ...result });
+        if (Number(backup.size || 0) <= 0) {
+          sendJson(res, 400, { ok: false, error: 'Refusing to restore a 0 byte backup. Choose a non-empty save backup.' });
+          return;
+        }
+        const job = runTrackedActionInBackground('restoreBackup', () => runPowerShellDynamic('scripts\\ops\\Restore-PzBackup.ps1', ['-BackupPath', backup.fullPath, '-Restart']));
+        sendJson(res, 202, { ok: true, accepted: true, job, health: systemHealth(), preflight: modPreflight() });
         return;
       }
       if (body.action === 'applyConfigRestart') {
