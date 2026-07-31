@@ -1157,3 +1157,15 @@ pre {
     padding-top: 12px;
   }
 }
+
+.backup-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.backup-delete {
+  color: var(--red);
+  min-width: 38px;
+  min-height: 38px;
+}

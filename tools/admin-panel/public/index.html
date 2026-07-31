@@ -51,6 +51,7 @@
         <div><span>What changes are safe?</span><strong>Manager updates preserve server config, mods, saves, logs, backups, and runtime files.</strong></div>
         <div><span>Join info</span><strong id="joinInfo">Waiting for config.</strong></div>
       </div>
+      <div class="guidance-panel compact" id="permissionsNotice" hidden></div>
       <div class="action-row">
         <button class="primary" data-action="start" title="Start the Project Zomboid server using the current config.">Start</button>
         <button data-action="stop" title="Save and stop the Project Zomboid server.">Stop</button>
@@ -146,14 +147,14 @@
     <section class="panel" id="mods">
       <div class="guidance-panel compact">
         <strong>Mods need both server and player clients to agree.</strong>
-        <span>Save Mods updates the server load list. Workshop updates still require a server restart, and players may need Steam to finish client-side downloads.</span>
+        <span>Use Update Mods + Restart for a deliberate maintenance operation. It warns players, backs up saves, updates Workshop content, restarts Project Zomboid, and verifies recovery. Smart Refresh remains the guarded option for scheduled maintenance.</span>
       </div>
       <div class="mod-toolbar">
         <button id="addModBtn" class="primary">Add Mod</button>
         <button id="saveModsBtn">Save Mods</button>
         <button id="checkModsBtn">Check Updates</button>
-        <button data-action="refreshMods">Refresh Mods</button>
-        <button data-action="smartRefreshMods">Smart Refresh</button>
+        <button data-action="refreshMods" title="Warn players, back up saves, update enabled Workshop mods, restart the server, and verify recovery.">Update Mods + Restart</button>
+        <button data-action="smartRefreshMods" title="Run the guarded maintenance workflow only when its safety checks and maintenance window allow it.">Smart Refresh</button>
       </div>
       <button class="help-link" type="button" data-help-actions="refreshMods,smartRefreshMods,prepareStagedUpdate,stagedRefresh">Action Help</button>
       <div class="mod-summary">
@@ -221,7 +222,6 @@
           <button data-action="restartPanel" title="Restart only this local admin web panel. The Project Zomboid server keeps running.">Restart Admin Panel</button>
           <button data-action="shutdownPanel" title="Close only this local admin web panel.">Close Admin Panel</button>
           <button data-action="installFirewallRules" title="Add Windows Firewall rules for Project Zomboid ports. Requires Administrator permission.">Install Firewall Rules</button>
-          <button data-action="smartRefreshMods" title="Refresh mods only when player activity and the maintenance window allow it.">Smart Mod Refresh</button>
         </div>
       </details>
       <button class="help-link" type="button" data-help-actions="watchdog,enableAutomation,disableAutomation,automationCheck,restartPanel,shutdownPanel,installFirewallRules,smartRefreshMods">Action Help</button>
@@ -288,25 +288,16 @@
         <span>Use Overview for daily operation. Use this panel for updates, staged refreshes, rollback, firewall, automation, and cleanup.</span>
       </div>
       <div class="ops-grid">
-        <button data-action="backup">Backup Saves</button>
-        <button data-action="update">Update</button>
-        <button data-action="updateMods">Update Mods</button>
-        <button data-action="refreshMods">Refresh Mods</button>
-        <button data-action="smartRefreshMods">Smart Refresh</button>
+        <button data-action="update">Update server files</button>
         <button data-action="prepareStagedUpdate">Prepare Staged Update</button>
         <button data-action="stagedRefresh">Staged Refresh</button>
         <button data-action="rollbackStagedUpdate">Rollback Staged Update</button>
-        <button data-action="enableAutomation">Enable Automation</button>
-        <button data-action="disableAutomation">Disable Automation</button>
-        <button data-action="automationCheck">Automation Check</button>
-        <button data-action="restartPanel">Restart Panel</button>
-        <button data-action="shutdownPanel">Close Panel</button>
         <button data-action="installFirewallRules">Firewall Rules</button>
         <button data-action="applyConfig">Apply Config</button>
         <button data-action="pruneBackups">Prune Backups</button>
         <button data-action="pruneLogs">Prune Logs</button>
       </div>
-      <button class="help-link" type="button" data-help-actions="backup,update,updateMods,refreshMods,smartRefreshMods,prepareStagedUpdate,stagedRefresh,rollbackStagedUpdate,enableAutomation,disableAutomation,automationCheck,restartPanel,shutdownPanel,installFirewallRules,applyConfig,pruneBackups,pruneLogs">Action Help</button>
+      <button class="help-link" type="button" data-help-actions="update,prepareStagedUpdate,stagedRefresh,rollbackStagedUpdate,installFirewallRules,applyConfig,pruneBackups,pruneLogs">Action Help</button>
       <div class="path-list">
         <div><span>Env</span><code id="envPath"></code></div>
         <div><span>Server ini</span><code id="iniPath"></code></div>

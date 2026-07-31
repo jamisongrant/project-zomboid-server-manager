@@ -45,7 +45,7 @@ const actionLabels = {
   restoreBackup: 'Restore backup',
   update: 'Update server files',
   updateMods: 'Update mods',
-  refreshMods: 'Refresh mods',
+  refreshMods: 'Update Mods + Restart',
   watchdog: 'Run watchdog',
   enableAutomation: 'Enable automation',
   disableAutomation: 'Disable automation',
@@ -64,7 +64,7 @@ const actionConfirmations = {
   restart: 'Back up saves and restart the Project Zomboid server now?',
   stagedRefresh: 'Apply the already staged refresh now? This warns players, stops the server, swaps staged files in, starts again, and rolls back if health fails.',
   rollbackStagedUpdate: 'Rollback to the previous staged server copy and restart?',
-  refreshMods: 'Refresh mods now? This may restart the server.',
+  refreshMods: 'Update all enabled Workshop mods and restart the server now? Players will be warned and disconnected during the restart.',
   update: 'Update Project Zomboid server files now? This may restart the server.',
   updateMods: 'Update Workshop mods now? This may require a server restart before players can join.',
   applyConfigRestart: 'Apply saved config and restart now? Current players will be disconnected.',
@@ -89,7 +89,7 @@ const actionDescriptions = {
   restoreBackup: 'Stops the server, protects the current save with a pre-restore backup, restores the selected save, then starts the server.',
   update: 'Runs SteamCMD validation/update for the dedicated server files. May require restart before use.',
   updateMods: 'Downloads enabled Workshop items from config\\mods.json. It does not decide whether the server should restart.',
-  refreshMods: 'Updates Workshop mods, backs up saves, and restarts so Project Zomboid loads the refreshed mod files.',
+  refreshMods: 'The deliberate maintenance workflow: warns players, stops the server, creates a save backup, updates enabled Workshop mods, starts the server, and runs a watchdog health check.',
   watchdog: 'Checks whether the server appears unhealthy and restarts it when watchdog rules say recovery is needed.',
   enableAutomation: 'Registers Windows scheduled tasks for startup, watchdog, backups, and optional smart mod refresh.',
   disableAutomation: 'Turns off scheduled manager tasks. It does not stop the currently running server.',
@@ -217,6 +217,7 @@ function renderHealth() {
   const preflight = state.preflight || {};
   const watchdog = health.watchdog || {};
   const staged = health.stagedUpdate || {};
+  const permissions = health.permissions || {};
   $('#playerCount').textContent = health.players?.PlayerCount ?? '-';
   $('#watchdogState').textContent = watchdog.running === true ? 'Healthy' : watchdog.maintenance ? 'Maintenance' : 'Unknown';
   $('#backupCount').textContent = String(state.backups.length || health.backups?.length || 0);
@@ -226,9 +227,16 @@ function renderHealth() {
   $('#automationState').textContent = health.automationTasks?.totalCount ? `${health.automationTasks.enabledCount || 0}/${health.automationTasks.totalCount}` : 'None';
   $('#preflightSummary').textContent = `Workshop ${preflight.workshopCount || 0}, load order ${preflight.loadOrderCount || 0}, duplicate Workshop ${preflight.duplicateWorkshop?.length || 0}, duplicate Mod IDs ${preflight.duplicateMods?.length || 0}`;
 
+  const permissionsNotice = $('#permissionsNotice');
+  if (permissionsNotice) {
+    permissionsNotice.hidden = permissions.isElevated !== false;
+    permissionsNotice.innerHTML = '<strong>Administrator permissions required for maintenance.</strong><span>Close this panel and relaunch <code>Open-AdminPanel.ps1</code> as Administrator before using restart, restore, firewall, automation, or blue/green swap actions.</span>';
+  }
+
   $('#healthDetails').innerHTML = [
     ['Server PID', health.serverPid || '-'],
     ['Admin panel PID', health.adminPanelPid || '-'],
+    ['Windows permissions', permissions.message || 'Unknown'],
     ['Staged server', staged.stagedReady ? staged.stagedServerDir : 'None'],
     ['Rollback server', staged.rollbackReady ? staged.rollbackServerDir : 'None'],
     ['Duplicate Workshop IDs', (preflight.duplicateWorkshop || []).join(', ') || 'None'],
@@ -855,7 +863,10 @@ function renderBackups() {
   list.innerHTML = state.backups.map((backup) => `
     <div class="backup-row">
       <div><strong>${escapeHtml(backup.name)}</strong><span>${new Date(backup.modified).toLocaleString()} · ${formatBytes(backup.size)}</span></div>
-      <button data-restore="${escapeHtml(backup.name)}" ${Number(backup.size || 0) <= 0 ? 'disabled title="0 byte backups cannot be restored."' : ''}>Restore</button>
+      <div class="backup-actions">
+        <button data-restore="${escapeHtml(backup.name)}" ${Number(backup.size || 0) <= 0 ? 'disabled title="0 byte backups cannot be restored."' : ''}>Restore</button>
+        <button class="icon-button backup-delete" data-delete-backup="${escapeHtml(backup.name)}" title="Delete this backup" aria-label="Delete this backup">&#128465;</button>
+      </div>
     </div>
   `).join('');
   list.querySelectorAll('[data-restore]').forEach((button) => {
@@ -1146,6 +1157,13 @@ function setActionBusy(action, busy) {
       delete button.dataset.originalText;
     }
   });
+  list.querySelectorAll('[data-delete-backup]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const name = button.dataset.deleteBackup;
+      if (!confirm(`Delete ${name}? This removes only this backup archive and cannot be undone.`)) return;
+      deleteBackup(name).catch((error) => appendOutput(error.message));
+    });
+  });
 }
 
 async function refreshHealthOnly() {
@@ -1190,6 +1208,13 @@ async function refreshBackups(render = true) {
   const result = await api('/api/backups');
   state.backups = result.backups || [];
   if (render) renderBackups();
+}
+
+async function deleteBackup(name) {
+  const result = await api(`/api/backups/${encodeURIComponent(name)}`, { method: 'DELETE' });
+  state.backups = result.backups || state.backups.filter((backup) => backup.name !== name);
+  appendOutput(`Deleted backup ${name}.`);
+  renderBackups();
 }
 
 async function refreshLogs(render = true) {

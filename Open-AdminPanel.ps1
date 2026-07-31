@@ -1,9 +1,21 @@
 param(
-    [int]$Port = 8787
+    [int]$Port = 8787,
+    [switch]$Relaunched
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+if (-not $Relaunched) {
+    $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+    $isAdministrator = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    if (-not $isAdministrator) {
+        $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" -Relaunched -Port $Port"
+        Start-Process -FilePath 'powershell.exe' -Verb RunAs -ArgumentList $arguments | Out-Null
+        Write-Host 'Administrator permission requested. Approve the UAC prompt to start the admin panel.'
+        exit 0
+    }
+}
 
 $stateDir = 'C:\pz\state'
 $pidPath = Join-Path $stateDir 'admin-panel.pid'

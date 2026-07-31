@@ -81,7 +81,7 @@ const actions = {
   pruneBackups: ['scripts\\ops\\Prune-Backups.ps1'],
   pruneLogs: ['internal:pruneLogs'],
   updateMods: ['scripts\\ops\\Update-PzMods.ps1'],
-  refreshMods: ['scripts\\ops\\Refresh-PzMods.ps1'],
+  refreshMods: ['scripts\\ops\\Invoke-PzStagedRefresh.ps1'],
   smartRefreshMods: ['scripts\\ops\\Invoke-PzAutomationMaintenance.ps1'],
   automationCheck: ['scripts\\ops\\Invoke-PzAutomationMaintenance.ps1', '-CheckOnly', '-IgnoreWindow'],
   prepareStagedUpdate: ['scripts\\ops\\Prepare-PzStagedUpdate.ps1'],
@@ -101,6 +101,22 @@ const backgroundActions = new Set([
   'stagedRefresh',
   'rollbackStagedUpdate',
   'update'
+]);
+
+const elevationRequiredActions = new Set([
+  'stop',
+  'restart',
+  'applyConfigRestart',
+  'stagedRefresh',
+  'rollbackStagedUpdate',
+  'restoreBackup',
+  'smartRefreshMods',
+  'refreshMods',
+  'updateMods',
+  'update',
+  'enableAutomation',
+  'disableAutomation',
+  'installFirewallRules'
 ]);
 
 const settingEnvKeys = {
@@ -679,6 +695,26 @@ function syncModsToIni(mods, modLoadOrder = []) {
   writeIni(serverIniPath(), updates);
 }
 
+function permissionSummary() {
+  if (process.platform !== 'win32') {
+    return { supported: false, isElevated: true, message: 'Windows elevation check is not required.' };
+  }
+
+  const result = spawnSync('powershell.exe', [
+    '-NoProfile',
+    '-Command',
+    '$p = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent()); $p.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)'
+  ], { encoding: 'utf8', windowsHide: true });
+  const isElevated = String(result.stdout || '').trim().toLowerCase() === 'true';
+  return {
+    supported: true,
+    isElevated,
+    message: isElevated
+      ? 'Admin panel has Administrator permissions.'
+      : 'Restart the admin panel as Administrator before stopping, restoring, swapping, or scheduling server work.'
+  };
+}
+
 function runPowerShell(args) {
   return new Promise((resolve) => {
     const scriptArgs = [
@@ -1227,6 +1263,7 @@ function systemHealth() {
   const restoreProgress = readJsonIfExists(path.join(stateDir, 'restore-progress.json'));
   const stagedReady = fs.existsSync(stagedServerDir);
   return {
+    permissions: permissionSummary(),
     watchdog: readJsonIfExists(statusPath),
     serverPid: fs.existsSync(pidPath) ? fs.readFileSync(pidPath, 'utf8').trim() : '',
     adminPanelPid: fs.existsSync(adminPidPath) ? fs.readFileSync(adminPidPath, 'utf8').trim() : '',
@@ -1450,6 +1487,18 @@ async function route(req, res) {
       return;
     }
 
+    if (req.method === 'DELETE' && url.pathname.startsWith('/api/backups/')) {
+      const name = decodeURIComponent(url.pathname.slice('/api/backups/'.length));
+      const backup = listBackups().find((item) => item.name === name);
+      if (!backup) {
+        sendJson(res, 404, { ok: false, error: 'Backup not found.' });
+        return;
+      }
+      fs.unlinkSync(backup.fullPath);
+      sendJson(res, 200, { ok: true, deleted: backup.name, backups: listBackups() });
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/api/logs') {
       sendJson(res, 200, { ok: true, logs: listLogs() });
       return;
@@ -1587,12 +1636,20 @@ async function route(req, res) {
         return;
       }
       if (body.action === 'applyConfigRestart') {
+        if (!permissionSummary().isElevated) {
+          sendJson(res, 409, { ok: false, error: 'Administrator permissions are required. Close the admin panel, then relaunch it as Administrator before applying config or restarting.' });
+          return;
+        }
         const result = await runTrackedAction('applyConfigRestart', () => runApplyConfigThenRestart());
         sendJson(res, result.code === 0 ? 200 : 500, { ok: result.code === 0, ...result });
         return;
       }
       if (!actions[body.action]) {
         sendJson(res, 400, { ok: false, error: 'Unknown action.' });
+        return;
+      }
+      if (elevationRequiredActions.has(body.action) && !permissionSummary().isElevated) {
+        sendJson(res, 409, { ok: false, error: 'Administrator permissions are required for this action. Close the admin panel, then relaunch it as Administrator and try again.' });
         return;
       }
       if (backgroundActions.has(body.action)) {
