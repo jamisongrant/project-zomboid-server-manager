@@ -443,7 +443,7 @@ function readModState() {
 
 function modStateFromIni(iniValues) {
   const workshopIds = splitModIds(iniValues.WorkshopItems || '');
-  const modIds = splitModIds(iniValues.Mods || '');
+  const modIds = normalizeModLoadOrder(iniValues.Mods || '', workshopIds);
   const hasWorkshopIds = workshopIds.length > 0;
   const pairedModIds = hasWorkshopIds && modIds.length === workshopIds.length ? modIds : [];
   const max = hasWorkshopIds ? workshopIds.length : modIds.length;
@@ -471,6 +471,22 @@ function modStateFromIni(iniValues) {
   return { entries, modLoadOrder: modIds, recoveredFromIni: true };
 }
 
+function normalizeModLoadOrder(value, workshopIds = []) {
+  const workshopSet = new Set(workshopIds.map((id) => String(id)));
+  const result = [];
+  const rawTokens = splitModIds(value).map((item) => item.replace(/^\\+/, '').trim()).filter(Boolean);
+  for (const token of rawTokens) {
+    if (/^\d+$/.test(token) && workshopSet.has(token)) continue;
+    const glued = token.match(/^(\d{10})([A-Za-z_].+)$/);
+    if (glued && workshopSet.has(glued[1])) {
+      result.push(glued[2]);
+      continue;
+    }
+    result.push(token);
+  }
+  return result;
+}
+
 function modStateFromIniFile(filePath) {
   if (!fs.existsSync(filePath)) return null;
   const ini = readIni(filePath).values;
@@ -479,7 +495,7 @@ function modStateFromIniFile(filePath) {
     ...state,
     sourcePath: filePath,
     workshopCount: splitModIds(ini.WorkshopItems || '').length,
-    loadOrderCount: splitModIds(ini.Mods || '').length
+    loadOrderCount: normalizeModLoadOrder(ini.Mods || '', splitModIds(ini.WorkshopItems || '')).length
   };
 }
 
@@ -545,7 +561,7 @@ function modDiagnostics() {
     storedEntryCount: stored.entries.length,
     storedLoadOrderCount: stored.modLoadOrder.length,
     iniWorkshopCount: splitModIds(ini.WorkshopItems || '').length,
-    iniLoadOrderCount: splitModIds(ini.Mods || '').length,
+    iniLoadOrderCount: normalizeModLoadOrder(ini.Mods || '', splitModIds(ini.WorkshopItems || '')).length,
     backupRecoveryCount: candidates.filter((candidate) => candidate.sourceLabel !== 'active server.ini').length,
     bestRecoverySource: best ? best.sourceLabel : '',
     bestRecoveryWorkshopCount: best ? best.workshopCount : 0,
