@@ -331,12 +331,12 @@ Add-Check 'Admin UI explains status and risky actions' {
             throw "Admin UI must include $required."
         }
     }
-    foreach ($required in @('renderNextStep', 'renderModRecoveryPanel', 'renderJobs', 'renderGrooming', 'renderModUpdateProgress', 'renderStagedHealth', 'renderRestartJustification', 'renderAutomationStatus', 'taskResultText', 'renderActiveActionBanner', 'setActionBusy', 'refreshHealthOnly', 'pollActionJob', 'started in the background', 'openActionHelp', 'closeActionHelp', 'actionDescriptions', 'Smart mod refresh', 'The Project Zomboid server keeps running', 'Apply config + restart', 'Server is starting', '/api/mods/repair')) {
+    foreach ($required in @('renderNextStep', 'renderModRecoveryPanel', 'renderJobs', 'renderGrooming', 'renderModUpdateProgress', 'renderStagedHealth', 'stagedReadiness', 'Apply readiness', 'Review meaning', 'Re-stage fresh before applying', 'renderRestartJustification', 'renderAutomationStatus', 'taskResultText', 'renderActiveActionBanner', 'setActionBusy', 'refreshHealthOnly', 'pollActionJob', 'started in the background', 'openActionHelp', 'closeActionHelp', 'actionDescriptions', 'Smart mod refresh', 'The Project Zomboid server keeps running', 'Apply config + restart', 'Server is starting', '/api/mods/repair')) {
         if ($appJs -notmatch [regex]::Escape($required)) {
             throw "Admin frontend must include explanatory behavior for $required."
         }
     }
-    foreach ($required in @('.guidance-panel', '.status-explainer', '.active-action-banner', '.help-link', '.action-help-modal', '.action-help-card', '.monitor-panel', '.job-row', '.automation-row', '.progress-bar', '.state-pill', '.status-table', 'button.busy')) {
+    foreach ($required in @('.guidance-panel', '.status-explainer', '.active-action-banner', '.help-link', '.action-help-modal', '.action-help-card', '.monitor-panel', '.job-row', '.automation-row', '.review-row', '.progress-bar', '.state-pill', '.status-table', 'button.busy')) {
         if ($styles -notmatch [regex]::Escape($required)) {
             throw "Admin styles must include $required."
         }

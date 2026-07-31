@@ -297,6 +297,7 @@ function renderStagedHealth() {
   const staged = state.health?.stagedUpdate || {};
   const progress = staged.progress || {};
   const phase = progress.phase || (staged.stagedReady ? 'prepared' : staged.rollbackReady ? 'rollback-ready' : 'none');
+  const readiness = stagedReadiness(staged, progress);
   $('#stagedHealth').innerHTML = `
     <div class="progress-heading">
       ${statusPill(phase, phaseTone(phase))}
@@ -306,13 +307,62 @@ function renderStagedHealth() {
     <div class="status-table">
       <div><span>Staged build</span><code>${staged.stagedReady ? 'Ready' : 'Not present'}</code></div>
       <div><span>Rollback copy</span><code>${staged.rollbackReady ? 'Ready' : 'Not present'}</code></div>
-      <div><span>Safe to apply</span><code>${progress.safeToApply ? 'Yes' : staged.stagedReady ? 'Review first' : 'No'}</code></div>
+      <div><span>Apply readiness</span><code>${escapeHtml(readiness.label)}</code></div>
+      <div><span>Review meaning</span><code>${escapeHtml(readiness.summary)}</code></div>
       <div><span>Current Workshop ID</span><code>${escapeHtml(progress.currentWorkshopId || '-')}</code></div>
+      <div><span>Prepared at</span><code>${escapeHtml(formatDate(staged.manifest?.PreparedAt || progress.finishedAt))}</code></div>
       <div><span>Staged path</span><code>${escapeHtml(staged.stagedServerDir || progress.stageServerDir || '-')}</code></div>
       <div><span>Rollback path</span><code>${escapeHtml(staged.rollbackServerDir || progress.rollbackServerDir || '-')}</code></div>
       ${progress.lastError ? `<div><span>Last error</span><code>${escapeHtml(progress.lastError)}</code></div>` : ''}
     </div>
+    <div class="review-list">
+      ${readiness.items.map((item) => `
+        <div class="review-row ${escapeHtml(item.tone)}">
+          ${statusPill(item.status, item.tone)}
+          <span>${escapeHtml(item.text)}</span>
+        </div>
+      `).join('')}
+    </div>
   `;
+}
+
+function stagedReadiness(staged, progress) {
+  const preflight = state.preflight || {};
+  const players = Number(state.health?.players?.PlayerCount ?? 0);
+  const backupCount = Number(state.backups.length || state.health?.backups?.length || 0);
+  const hasManifest = Boolean(staged.manifest);
+  const hasPreparedMarker = progress.safeToApply === true || progress.phase === 'prepared';
+  const items = [
+    staged.stagedReady
+      ? { status: 'OK', tone: 'ok', text: 'A staged server folder exists.' }
+      : { status: 'No', tone: 'danger', text: 'No staged server folder exists.' },
+    hasPreparedMarker
+      ? { status: 'OK', tone: 'ok', text: 'The staged prepare workflow recorded a successful completion.' }
+      : { status: 'Review', tone: 'warning', text: 'No successful staged prepare marker was found. Re-stage fresh before applying if you are unsure.' },
+    hasManifest
+      ? { status: 'OK', tone: 'ok', text: 'A staged update manifest is present.' }
+      : { status: 'Review', tone: 'warning', text: 'No staged update manifest was found, so the panel cannot prove what is in server-next.' },
+    preflight.ok
+      ? { status: 'OK', tone: 'ok', text: 'Mod preflight is clean.' }
+      : { status: 'Review', tone: 'warning', text: 'Mod preflight needs review before applying staged files.' },
+    players === 0
+      ? { status: 'OK', tone: 'ok', text: 'No players are currently detected online.' }
+      : { status: 'Wait', tone: 'warning', text: `${players} player${players === 1 ? '' : 's'} detected online. Applying staged refresh will disconnect them.` },
+    backupCount > 0
+      ? { status: 'OK', tone: 'ok', text: `${backupCount} backup${backupCount === 1 ? '' : 's'} visible to the manager.` }
+      : { status: 'Review', tone: 'warning', text: 'No backups are visible. Take a backup before applying staged files.' }
+  ];
+
+  if (!staged.stagedReady) {
+    return { label: 'No staged build', summary: 'Nothing is waiting to apply.', items };
+  }
+  if (progress.phase === 'failed') {
+    return { label: 'Do not apply', summary: 'The staged workflow recorded a failure. Review logs or prepare a fresh staged update.', items };
+  }
+  if (hasPreparedMarker && hasManifest && preflight.ok && players === 0 && backupCount > 0) {
+    return { label: 'Ready to apply', summary: 'The staged build has the expected proof markers and basic safety checks are green.', items };
+  }
+  return { label: 'Review first', summary: 'A staged folder exists, but one or more proof or safety checks need attention before applying.', items };
 }
 
 function renderRestartJustification() {
