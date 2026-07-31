@@ -116,6 +116,18 @@ p {
 .badge.stopped { color: #180807; background: var(--red); border-color: var(--red); }
 .muted { color: var(--muted); }
 
+.active-action-banner {
+  border-top: 1px solid rgba(227, 182, 90, .45);
+  border-bottom: 1px solid rgba(227, 182, 90, .45);
+  background: rgba(227, 182, 90, .12);
+  color: var(--text);
+  padding: 10px 20px;
+}
+
+.active-action-banner strong {
+  color: var(--warn);
+}
+
 .layout {
   display: grid;
   grid-template-columns: 180px minmax(0, 1fr);

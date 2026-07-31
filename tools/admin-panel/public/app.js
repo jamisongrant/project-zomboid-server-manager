@@ -112,6 +112,20 @@ function appendOutput(message) {
   output.textContent = `[${stamp}] ${message}\n\n${output.textContent}`.slice(0, 18000);
 }
 
+function renderActiveActionBanner() {
+  const banner = $('#activeActionBanner');
+  if (!banner) return;
+  const actions = [...state.activeActions];
+  if (actions.length === 0) {
+    banner.hidden = true;
+    banner.textContent = '';
+    return;
+  }
+  const labels = actions.map((action) => actionLabels[action] || action).join(', ');
+  banner.hidden = false;
+  banner.innerHTML = `<strong>Working:</strong> ${escapeHtml(labels)}. Health is refreshing with live progress.`;
+}
+
 async function api(path, options = {}) {
   const response = await fetch(path, {
     headers: { 'Content-Type': 'application/json' },
@@ -883,6 +897,7 @@ async function runAction(action) {
 function setActionBusy(action, busy) {
   if (busy) state.activeActions.add(action);
   else state.activeActions.delete(action);
+  renderActiveActionBanner();
   const buttons = [
     ...all(`[data-action="${action}"]`),
     ...(action === 'prepareStagedUpdate' ? [$('#stagePendingModsBtn')] : []),
