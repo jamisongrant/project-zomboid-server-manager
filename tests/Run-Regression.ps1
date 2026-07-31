@@ -238,7 +238,7 @@ Add-Check 'Mod and staged workflows publish progress state' {
             throw "Staged refresh must publish $required."
         }
     }
-    foreach ($required in @('modUpdate', 'restartRecommendation', 'automationTasksSummary', 'PZ Vanilla *', 'LastTaskResult', 'buildRestartRecommendation', 'staged-update-progress.json', 'backgroundActions', 'accepted')) {
+    foreach ($required in @('modUpdate', 'restartRecommendation', 'automationTasksSummary', 'normalizeSetupCheck', 'Serving this page from PID', 'PZ Vanilla *', 'LastTaskResult', 'buildRestartRecommendation', 'staged-update-progress.json', 'backgroundActions', 'accepted')) {
         if ($serverJs -notmatch [regex]::Escape($required)) {
             throw "Admin health API must expose $required."
         }

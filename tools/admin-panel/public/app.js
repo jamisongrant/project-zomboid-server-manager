@@ -176,7 +176,7 @@ function renderNextStep() {
   const ready = Boolean(statusPayload.Ready);
   const pendingMods = state.mods.filter((mod) => mod.enabled && mod.needsUpdate).length;
   const staged = state.health?.stagedUpdate || {};
-  const setupTodo = (state.setup?.checks || []).filter((check) => !check.ok && !['firewall', 'automation', 'stagedUpdate', 'rollback'].includes(check.id));
+  const setupTodo = (state.setup?.checks || []).filter((check) => !check.ok && !['firewall', 'automation', 'stagedUpdate', 'rollback', 'adminPanel'].includes(check.id));
 
   let title = 'Server manager is ready.';
   let body = 'Use Settings for normal changes, Mods for Workshop lists, and Advanced only for maintenance or recovery.';

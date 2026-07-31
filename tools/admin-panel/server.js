@@ -663,12 +663,32 @@ function runSetupCheck() {
     child.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
     child.on('close', (code) => {
       try {
-        resolve({ ok: code === 0, setup: JSON.parse(stdout.trim()), stderr });
+        const setup = normalizeSetupCheck(JSON.parse(stdout.trim()));
+        resolve({ ok: code === 0 || setup.ok, setup, stderr });
       } catch {
         resolve({ ok: false, setup: null, stdout, stderr });
       }
     });
   });
+}
+
+function normalizeSetupCheck(setup) {
+  if (!setup || !Array.isArray(setup.checks)) return setup;
+  const checks = setup.checks.map((check) => {
+    if (check.id !== 'adminPanel') return check;
+    return {
+      ...check,
+      ok: true,
+      detail: `Serving this page from PID ${process.pid}`,
+      next: ''
+    };
+  });
+  const blocking = checks.filter((check) => !check.ok && !['firewall', 'automation', 'stagedUpdate', 'rollback', 'adminPanel'].includes(check.id));
+  return {
+    ...setup,
+    ok: blocking.length === 0,
+    checks
+  };
 }
 
 function runSetupInstall(options) {
