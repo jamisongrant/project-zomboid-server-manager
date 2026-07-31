@@ -672,10 +672,18 @@ function renderModRecoveryPanel() {
   const bestWorkshopCount = Number(diag.bestRecoveryWorkshopCount || 0);
   const bestSource = diag.bestRecoverySource || 'server.ini';
   const needsRepair = Boolean(diag.needsEntryRepair || diag.needsLoadOrderRepair || (managerCount === 0 && (iniCount > 0 || bestWorkshopCount > 0)));
+  const canRepair = Boolean(diag.recoverableFromIni && (iniCount > 0 || bestWorkshopCount > 0));
 
   panel.classList.toggle('warning', needsRepair || state.modStateSource === 'server.ini');
-  repairButton.disabled = !diag.recoverableFromIni;
+  repairButton.disabled = !canRepair;
+  repairButton.textContent = canRepair ? 'Repair From server.ini' : 'No Repair Source Found';
   repairButton.hidden = !needsRepair && managerCount > 0;
+
+  if (!canRepair && managerCount === 0) {
+    title.textContent = 'No Workshop recovery source was found.';
+    body.textContent = `Manager file has 0 mod rows and active server.ini has ${iniCount} Workshop items. The visible 54 MB save backup protects world progress, but save backups do not include WorkshopItems. Import or paste a previous server.ini with WorkshopItems, then repair.`;
+    return;
+  }
 
   if (needsRepair) {
     title.textContent = bestWorkshopCount > iniCount ? 'Mod view can be repaired from a config backup.' : 'Mod view can be repaired from server.ini.';

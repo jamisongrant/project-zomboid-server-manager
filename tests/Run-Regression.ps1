@@ -283,7 +283,7 @@ Add-Check 'Admin settings persist across apply config' {
     if ($appJs -notmatch 'Recovered from server.ini') {
         throw 'Admin frontend must explain recovered mod state.'
     }
-    foreach ($required in @('config backup', 'Best recovery source', 'bestRecoveryWorkshopCount', 'bestRecoverySource')) {
+    foreach ($required in @('config backup', 'Best recovery source', 'bestRecoveryWorkshopCount', 'bestRecoverySource', 'No Repair Source Found', 'save backups do not include WorkshopItems')) {
         if ($appJs -notmatch [regex]::Escape($required)) {
             throw "Admin frontend must explain backup-based mod recovery: $required"
         }
