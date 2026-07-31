@@ -912,6 +912,69 @@ function readJsonIfExists(filePath) {
   }
 }
 
+function buildRestartRecommendation(modUpdate, stagedProgress, stagedReady) {
+  if (stagedProgress?.phase === 'failed') {
+    return {
+      recommended: false,
+      severity: 'danger',
+      action: 'Review staged update failure',
+      reason: stagedProgress.lastError || 'The staged update workflow failed. Review logs before restarting or applying staged refresh again.'
+    };
+  }
+
+  if (modUpdate?.phase === 'failed') {
+    return {
+      recommended: false,
+      severity: 'danger',
+      action: 'Review mod update failure',
+      reason: modUpdate.lastError || 'The last Workshop update failed. Keep the current server stable until the failed item is understood.'
+    };
+  }
+
+  if (stagedProgress?.phase === 'prepared' || stagedReady) {
+    return {
+      recommended: true,
+      severity: 'warning',
+      action: 'Apply staged refresh during a quiet window',
+      reason: stagedProgress?.restartReason || 'A staged server build exists. Applying it will briefly stop the active server, back up saves, swap directories, and restart if needed.'
+    };
+  }
+
+  if (modUpdate?.restartRecommended) {
+    return {
+      recommended: true,
+      severity: 'warning',
+      action: 'Restart when players are clear',
+      reason: modUpdate.restartReason || 'Workshop files were refreshed. Project Zomboid loads them at startup, so a restart is needed for the running server to use them.'
+    };
+  }
+
+  if (stagedProgress?.phase && !['succeeded', 'skipped'].includes(stagedProgress.phase)) {
+    return {
+      recommended: false,
+      severity: 'info',
+      action: 'Wait for staged workflow',
+      reason: stagedProgress.status || 'A staged update workflow is in progress.'
+    };
+  }
+
+  if (modUpdate?.phase === 'running') {
+    return {
+      recommended: false,
+      severity: 'info',
+      action: 'Wait for mod update',
+      reason: modUpdate.status || 'Workshop updates are currently running.'
+    };
+  }
+
+  return {
+    recommended: false,
+    severity: 'ok',
+    action: 'No restart pressure',
+    reason: 'No completed mod or staged update is currently asking for a restart.'
+  };
+}
+
 function systemHealth() {
   const { stateDir } = envPaths();
   const env = readEnv();
@@ -922,6 +985,9 @@ function systemHealth() {
   const statusPath = path.join(stateDir, 'watchdog-health.json');
   const pidPath = path.join(stateDir, 'server.pid');
   const adminPidPath = path.join(stateDir, 'admin-panel.pid');
+  const modUpdate = readJsonIfExists(path.join(stateDir, 'mod-update.json'));
+  const stagedProgress = readJsonIfExists(path.join(stateDir, 'staged-update-progress.json'));
+  const stagedReady = fs.existsSync(stagedServerDir);
   return {
     watchdog: readJsonIfExists(statusPath),
     serverPid: fs.existsSync(pidPath) ? fs.readFileSync(pidPath, 'utf8').trim() : '',
@@ -931,10 +997,13 @@ function systemHealth() {
     jobs: readJobs().slice(0, 10),
     backupGrooming: backupGroomingSummary(),
     logGrooming: logGroomingSummary(),
+    modUpdate,
+    restartRecommendation: buildRestartRecommendation(modUpdate, stagedProgress, stagedReady),
     stagedUpdate: {
-      stagedReady: fs.existsSync(stagedServerDir),
+      stagedReady,
       rollbackReady: fs.existsSync(rollbackServerDir),
       manifest: readJsonIfExists(manifestPath),
+      progress: stagedProgress,
       stagedServerDir,
       rollbackServerDir
     },

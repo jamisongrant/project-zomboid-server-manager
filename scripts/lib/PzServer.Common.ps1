@@ -126,6 +126,23 @@ function Write-PzLog {
     Add-Content -LiteralPath (Get-PzLogPath -Config $Config -Name $Name) -Value $line
 }
 
+function Write-PzStateJson {
+    param(
+        [pscustomobject]$Config,
+        [string]$Name,
+        [hashtable]$Data
+    )
+
+    Initialize-PzDirectories -Config $Config
+    $path = Join-Path $Config.StateDir $Name
+    $payload = [ordered]@{}
+    foreach ($key in $Data.Keys) {
+        $payload[$key] = $Data[$key]
+    }
+    $payload['updatedAt'] = (Get-Date).ToString('o')
+    $payload | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $path -Encoding ASCII
+}
+
 function Get-PzServerExecutable {
     param(
         [pscustomobject]$Config

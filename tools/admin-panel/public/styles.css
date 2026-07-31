@@ -294,6 +294,92 @@ button.primary {
   margin-bottom: 10px;
 }
 
+.progress-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.progress-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.progress-heading strong {
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.progress-panel p {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.progress-bar {
+  height: 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(8, 12, 11, .75);
+  overflow: hidden;
+}
+
+.progress-bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width .18s ease;
+}
+
+.state-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.state-pill.ok {
+  border-color: rgba(107, 210, 141, .55);
+  color: var(--good);
+}
+
+.state-pill.warning {
+  border-color: rgba(227, 182, 90, .72);
+  color: var(--warn);
+}
+
+.state-pill.danger {
+  border-color: rgba(240, 117, 110, .72);
+  color: var(--bad);
+}
+
+.status-table {
+  display: grid;
+  gap: 7px;
+}
+
+.status-table div {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+}
+
+.status-table span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.status-table code {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
 .job-list {
   display: grid;
   gap: 8px;

@@ -211,6 +211,40 @@ Add-Check 'Admin panel action scripts exist' {
     }
 }
 
+Add-Check 'Mod and staged workflows publish progress state' {
+    $common = Get-Content -LiteralPath (Join-Path $projectRoot 'scripts/lib/PzServer.Common.ps1') -Raw
+    $updateMods = Get-Content -LiteralPath (Join-Path $projectRoot 'scripts/ops/Update-PzMods.ps1') -Raw
+    $prepareStaged = Get-Content -LiteralPath (Join-Path $projectRoot 'scripts/ops/Prepare-PzStagedUpdate.ps1') -Raw
+    $stagedRefresh = Get-Content -LiteralPath (Join-Path $projectRoot 'scripts/ops/Invoke-PzStagedRefresh.ps1') -Raw
+    $serverJs = Get-Content -LiteralPath (Join-Path $projectRoot 'tools/admin-panel/server.js') -Raw
+
+    foreach ($required in @('Write-PzStateJson', 'ConvertTo-Json', 'updatedAt')) {
+        if ($common -notmatch [regex]::Escape($required)) {
+            throw "Common helpers must include $required."
+        }
+    }
+    foreach ($required in @('mod-update.json', 'phase', 'completed', 'currentWorkshopId', 'restartRecommended', 'restartReason')) {
+        if ($updateMods -notmatch [regex]::Escape($required)) {
+            throw "Mod update script must publish $required."
+        }
+    }
+    foreach ($required in @('staged-update-progress.json', 'safeToApply', 'stageServerDir', 'preparing-mods', 'restartReason')) {
+        if ($prepareStaged -notmatch [regex]::Escape($required)) {
+            throw "Staged preparation must publish $required."
+        }
+    }
+    foreach ($required in @('Write-StagedRefreshProgress', 'warning-players', 'stopping-server', 'swapping', 'health-check', 'rolling-back')) {
+        if ($stagedRefresh -notmatch [regex]::Escape($required)) {
+            throw "Staged refresh must publish $required."
+        }
+    }
+    foreach ($required in @('modUpdate', 'restartRecommendation', 'buildRestartRecommendation', 'staged-update-progress.json')) {
+        if ($serverJs -notmatch [regex]::Escape($required)) {
+            throw "Admin health API must expose $required."
+        }
+    }
+}
+
 Add-Check 'Admin settings persist across apply config' {
     $serverJs = Get-Content -LiteralPath (Join-Path $projectRoot 'tools/admin-panel/server.js') -Raw
     $appJs = Get-Content -LiteralPath (Join-Path $projectRoot 'tools/admin-panel/public/app.js') -Raw
@@ -274,17 +308,17 @@ Add-Check 'Admin UI explains status and risky actions' {
     $appJs = Get-Content -LiteralPath (Join-Path $projectRoot 'tools/admin-panel/public/app.js') -Raw
     $styles = Get-Content -LiteralPath (Join-Path $projectRoot 'tools/admin-panel/public/styles.css') -Raw
 
-    foreach ($required in @('nextStepPanel', 'statusMeaning', 'joinInfo', 'guidance-panel', 'Advanced Actions', 'modRecoveryPanel', 'Repair From server.ini', 'Restart Admin Panel', 'data-help-actions', 'actionHelpModal', 'Action Help', 'Recent Activity', 'Grooming Forecast', 'backupForecast', 'Prune Logs')) {
+    foreach ($required in @('nextStepPanel', 'statusMeaning', 'joinInfo', 'guidance-panel', 'Advanced Actions', 'modRecoveryPanel', 'Repair From server.ini', 'Restart Admin Panel', 'data-help-actions', 'actionHelpModal', 'Action Help', 'Recent Activity', 'Grooming Forecast', 'backupForecast', 'Prune Logs', 'Mod Update Progress', 'Blue/Green State', 'Restart Recommendation')) {
         if ($index -notmatch [regex]::Escape($required)) {
             throw "Admin UI must include $required."
         }
     }
-    foreach ($required in @('renderNextStep', 'renderModRecoveryPanel', 'renderJobs', 'renderGrooming', 'openActionHelp', 'closeActionHelp', 'actionDescriptions', 'Smart mod refresh', 'The Project Zomboid server keeps running', 'Apply config + restart', 'Server is starting', '/api/mods/repair')) {
+    foreach ($required in @('renderNextStep', 'renderModRecoveryPanel', 'renderJobs', 'renderGrooming', 'renderModUpdateProgress', 'renderStagedHealth', 'renderRestartJustification', 'openActionHelp', 'closeActionHelp', 'actionDescriptions', 'Smart mod refresh', 'The Project Zomboid server keeps running', 'Apply config + restart', 'Server is starting', '/api/mods/repair')) {
         if ($appJs -notmatch [regex]::Escape($required)) {
             throw "Admin frontend must include explanatory behavior for $required."
         }
     }
-    foreach ($required in @('.guidance-panel', '.status-explainer', '.help-link', '.action-help-modal', '.action-help-card', '.monitor-panel', '.job-row')) {
+    foreach ($required in @('.guidance-panel', '.status-explainer', '.help-link', '.action-help-modal', '.action-help-card', '.monitor-panel', '.job-row', '.progress-bar', '.state-pill', '.status-table')) {
         if ($styles -notmatch [regex]::Escape($required)) {
             throw "Admin styles must include $required."
         }

@@ -216,11 +216,98 @@ function renderHealth() {
 
   renderJobs();
   renderGrooming();
+  renderModUpdateProgress();
+  renderStagedHealth();
+  renderRestartJustification();
 }
 
 function formatDate(value) {
   if (!value) return 'Not scheduled';
   return new Date(value).toLocaleString();
+}
+
+function progressPercent(item) {
+  const total = Number(item?.total || 0);
+  if (total <= 0) return 0;
+  return Math.max(0, Math.min(100, Math.round((Number(item.completed || 0) / total) * 100)));
+}
+
+function renderProgressBar(item) {
+  const pct = progressPercent(item);
+  return `
+    <div class="progress-bar" aria-label="Progress">
+      <span style="width: ${pct}%"></span>
+    </div>
+    <code>${pct}% · ${escapeHtml(String(item?.completed ?? 0))}/${escapeHtml(String(item?.total ?? 0))}</code>
+  `;
+}
+
+function statusPill(label, tone = 'info') {
+  return `<span class="state-pill ${escapeHtml(tone)}">${escapeHtml(label || 'Unknown')}</span>`;
+}
+
+function phaseTone(phase) {
+  if (['succeeded', 'prepared', 'skipped'].includes(phase)) return 'ok';
+  if (['failed', 'rolling-back'].includes(phase)) return 'danger';
+  if (phase) return 'warning';
+  return 'info';
+}
+
+function renderModUpdateProgress() {
+  const update = state.health?.modUpdate;
+  if (!update) {
+    $('#modUpdateProgress').innerHTML = '<div class="empty-row">No recorded mod update yet.</div>';
+    return;
+  }
+
+  $('#modUpdateProgress').innerHTML = `
+    <div class="progress-heading">
+      ${statusPill(update.phase || 'unknown', phaseTone(update.phase))}
+      <strong>${escapeHtml(update.status || 'No status message recorded.')}</strong>
+    </div>
+    ${renderProgressBar(update)}
+    <div class="status-table">
+      <div><span>Current Workshop ID</span><code>${escapeHtml(update.currentWorkshopId || '-')}</code></div>
+      <div><span>Started</span><code>${escapeHtml(formatDate(update.startedAt))}</code></div>
+      <div><span>Finished</span><code>${escapeHtml(formatDate(update.finishedAt))}</code></div>
+      <div><span>Restart needed</span><code>${update.restartRecommended ? 'Yes' : 'No'}</code></div>
+      ${update.lastError ? `<div><span>Last error</span><code>${escapeHtml(update.lastError)}</code></div>` : ''}
+    </div>
+  `;
+}
+
+function renderStagedHealth() {
+  const staged = state.health?.stagedUpdate || {};
+  const progress = staged.progress || {};
+  const phase = progress.phase || (staged.stagedReady ? 'prepared' : staged.rollbackReady ? 'rollback-ready' : 'none');
+  $('#stagedHealth').innerHTML = `
+    <div class="progress-heading">
+      ${statusPill(phase, phaseTone(phase))}
+      <strong>${escapeHtml(progress.status || (staged.stagedReady ? 'Staged server files are waiting to be applied.' : 'No staged server version is waiting.'))}</strong>
+    </div>
+    ${progress.total !== undefined ? renderProgressBar(progress) : ''}
+    <div class="status-table">
+      <div><span>Staged build</span><code>${staged.stagedReady ? 'Ready' : 'Not present'}</code></div>
+      <div><span>Rollback copy</span><code>${staged.rollbackReady ? 'Ready' : 'Not present'}</code></div>
+      <div><span>Safe to apply</span><code>${progress.safeToApply ? 'Yes' : staged.stagedReady ? 'Review first' : 'No'}</code></div>
+      <div><span>Current Workshop ID</span><code>${escapeHtml(progress.currentWorkshopId || '-')}</code></div>
+      <div><span>Staged path</span><code>${escapeHtml(staged.stagedServerDir || progress.stageServerDir || '-')}</code></div>
+      <div><span>Rollback path</span><code>${escapeHtml(staged.rollbackServerDir || progress.rollbackServerDir || '-')}</code></div>
+      ${progress.lastError ? `<div><span>Last error</span><code>${escapeHtml(progress.lastError)}</code></div>` : ''}
+    </div>
+  `;
+}
+
+function renderRestartJustification() {
+  const recommendation = state.health?.restartRecommendation || {};
+  const tone = recommendation.severity || 'info';
+  $('#restartJustification').innerHTML = `
+    <div class="progress-heading">
+      ${statusPill(recommendation.recommended ? 'Recommended' : 'Not needed', tone)}
+      <strong>${escapeHtml(recommendation.action || 'No recommendation yet.')}</strong>
+    </div>
+    <p>${escapeHtml(recommendation.reason || 'No restart justification has been recorded.')}</p>
+  `;
 }
 
 function renderJobs() {
