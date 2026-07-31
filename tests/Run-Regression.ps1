@@ -286,6 +286,9 @@ Add-Check 'Admin settings persist across apply config' {
     if ($serverJs -notmatch 'effectiveModState' -or $serverJs -notmatch 'modStateFromIni' -or $serverJs -notmatch 'modStateSource') {
         throw 'Admin backend must recover mod state from server.ini when mods.json is missing.'
     }
+    if ($serverJs -notmatch 'const key = trimmed\.slice\(0, index\)\.trim\(\);') {
+        throw 'Admin INI readers must trim key whitespace consistently across Config and Mods views.'
+    }
     foreach ($required in @('modRecoveryCandidates', 'normalizeModLoadOrder', 'bestRecoverySource', 'backupRecoveryCount', 'repairedFrom', 'No WorkshopItems or Mods were found in the active server.ini or config backups')) {
         if ($serverJs -notmatch [regex]::Escape($required)) {
             throw "Admin backend must support backup-based mod recovery: $required"

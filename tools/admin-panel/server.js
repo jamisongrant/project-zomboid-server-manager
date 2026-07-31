@@ -188,7 +188,8 @@ function readIni(filePath) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#') || !trimmed.includes('=')) continue;
     const index = trimmed.indexOf('=');
-    values[trimmed.slice(0, index)] = trimmed.slice(index + 1);
+    const key = trimmed.slice(0, index).trim();
+    values[key] = trimmed.slice(index + 1);
   }
   return { values, lines };
 }
