@@ -876,6 +876,13 @@ function renderBackups() {
       runRestore(name).catch((error) => appendOutput(error.message));
     });
   });
+  list.querySelectorAll('[data-delete-backup]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const name = button.dataset.deleteBackup;
+      if (!confirm(`Delete ${name}? This removes only this backup archive and cannot be undone.`)) return;
+      deleteBackup(name).catch((error) => appendOutput(error.message));
+    });
+  });
 }
 
 function renderLogs() {
@@ -1156,13 +1163,6 @@ function setActionBusy(action, busy) {
       button.textContent = button.dataset.originalText;
       delete button.dataset.originalText;
     }
-  });
-  list.querySelectorAll('[data-delete-backup]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const name = button.dataset.deleteBackup;
-      if (!confirm(`Delete ${name}? This removes only this backup archive and cannot be undone.`)) return;
-      deleteBackup(name).catch((error) => appendOutput(error.message));
-    });
   });
 }
 
