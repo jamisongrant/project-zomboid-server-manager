@@ -1351,6 +1351,30 @@ function bindUi() {
     }
   });
 
+  $('#repairModsFile').addEventListener('change', async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!confirm(`Import ${file.name} for mod recovery? This updates only WorkshopItems and Mods, backs up the active server.ini, and does not restart the server.`)) return;
+    try {
+      appendOutput(`Importing ${file.name} for mod recovery.`);
+      const result = await api('/api/mods/repair-file', {
+        method: 'POST',
+        body: JSON.stringify({ content: await file.text() })
+      });
+      state.mods = result.mods || [];
+      state.modLoadOrder = result.modLoadOrder || [];
+      state.modStateSource = result.modStateSource || 'imported server.ini';
+      state.modDiagnostics = result.modDiagnostics || {};
+      state.settings = result.settings || state.settings;
+      state.modsDirty = false;
+      renderMods();
+      appendOutput(`Mod view imported from ${file.name}: ${state.mods.length} rows.`);
+    } catch (error) {
+      appendOutput(error.message);
+    }
+  });
+
   $('#stagePendingModsBtn').addEventListener('click', () => runAction('prepareStagedUpdate').catch((error) => appendOutput(error.message)));
   $('#applyStagedModsBtn').addEventListener('click', () => {
     runAction('stagedRefresh').catch((error) => appendOutput(error.message));

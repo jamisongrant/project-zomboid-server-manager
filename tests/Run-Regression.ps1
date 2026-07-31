@@ -289,7 +289,7 @@ Add-Check 'Admin settings persist across apply config' {
     if ($serverJs -notmatch 'const key = trimmed\.slice\(0, index\)\.trim\(\);') {
         throw 'Admin INI readers must trim key whitespace consistently across Config and Mods views.'
     }
-    foreach ($required in @('modRecoveryCandidates', 'normalizeModLoadOrder', 'bestRecoverySource', 'backupRecoveryCount', 'repairedFrom', 'No WorkshopItems or Mods were found in the active server.ini or config backups')) {
+    foreach ($required in @('modRecoveryCandidates', 'normalizeModLoadOrder', 'bestRecoverySource', 'backupRecoveryCount', 'repairedFrom', 'repairModsFromIniText', '/api/mods/repair-file', 'No WorkshopItems or Mods were found in the active server.ini or config backups')) {
         if ($serverJs -notmatch [regex]::Escape($required)) {
             throw "Admin backend must support backup-based mod recovery: $required"
         }
@@ -302,7 +302,7 @@ Add-Check 'Admin settings persist across apply config' {
     if ($appJs -notmatch 'Recovered from server.ini') {
         throw 'Admin frontend must explain recovered mod state.'
     }
-    foreach ($required in @('config backup', 'Best recovery source', 'bestRecoveryWorkshopCount', 'bestRecoverySource', 'No Repair Source Found', 'save backups do not include WorkshopItems')) {
+    foreach ($required in @('config backup', 'Best recovery source', 'bestRecoveryWorkshopCount', 'bestRecoverySource', 'No Repair Source Found', 'repairModsFile', 'save backups do not include WorkshopItems')) {
         if ($appJs -notmatch [regex]::Escape($required)) {
             throw "Admin frontend must explain backup-based mod recovery: $required"
         }

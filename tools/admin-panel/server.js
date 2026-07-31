@@ -183,20 +183,24 @@ function sandboxVarsPath() {
 function readIni(filePath) {
   if (!fs.existsSync(filePath)) return { values: {}, lines: [] };
   const lines = fs.readFileSync(filePath, 'utf8').split(/\r?\n/);
+  return { values: parseIniValues(lines.join('\n')), lines };
+}
+
+function readConfigText(filePath) {
+  if (!fs.existsSync(filePath)) return '';
+  return fs.readFileSync(filePath, 'utf8');
+}
+
+function parseIniValues(text) {
   const values = {};
-  for (const line of lines) {
+  for (const line of String(text || '').split(/\r?\n/)) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#') || !trimmed.includes('=')) continue;
     const index = trimmed.indexOf('=');
     const key = trimmed.slice(0, index).trim();
     values[key] = trimmed.slice(index + 1);
   }
-  return { values, lines };
-}
-
-function readConfigText(filePath) {
-  if (!fs.existsSync(filePath)) return '';
-  return fs.readFileSync(filePath, 'utf8');
+  return values;
 }
 
 function inferValueType(value) {
@@ -588,6 +592,19 @@ function repairModsFromIni() {
   }
   writeMods(best.entries, best.modLoadOrder);
   return { ...effectiveModState(), repairedFrom: best.sourceLabel, repairedFromPath: best.sourcePath };
+}
+
+function repairModsFromIniText(content) {
+  const normalized = assertConfigImportLooksSafe('ini', content);
+  const values = parseIniValues(normalized);
+  const state = modStateFromIni(values);
+  if (state.entries.length === 0 || splitModIds(values.WorkshopItems || '').length === 0) {
+    throw new Error('The selected server.ini does not contain a usable WorkshopItems list. Choose the server.ini from the working modded server.');
+  }
+
+  writeMods(state.entries, state.modLoadOrder);
+  syncModsToIni(state.entries, state.modLoadOrder);
+  return { ...effectiveModState(), repairedFrom: 'imported server.ini' };
 }
 
 function writeMods(mods, modLoadOrder = []) {
@@ -1515,6 +1532,21 @@ async function route(req, res) {
         repairedFrom: modState.repairedFrom || '',
         repairedFromPath: modState.repairedFromPath || '',
         settings: readIni(serverIniPath()).values
+      });
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/mods/repair-file') {
+      const body = await readJsonBody(req);
+      const modState = repairModsFromIniText(body.content || '');
+      sendJson(res, 200, {
+        ok: true,
+        mods: modState.entries,
+        modLoadOrder: modState.modLoadOrder,
+        modStateSource: 'imported server.ini',
+        repairedFrom: modState.repairedFrom,
+        settings: readIni(serverIniPath()).values,
+        modDiagnostics: modDiagnostics()
       });
       return;
     }
