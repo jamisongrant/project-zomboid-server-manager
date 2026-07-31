@@ -255,7 +255,9 @@ function renderHealth() {
 
 function formatDate(value) {
   if (!value) return 'Not scheduled';
-  return new Date(value).toLocaleString();
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime()) || date.getFullYear() <= 2000) return 'Never run';
+  return date.toLocaleString();
 }
 
 function nextWindowStart(startValue) {
@@ -452,7 +454,8 @@ function renderRestartJustification() {
 }
 
 function taskTone(task) {
-  if (Number(task.lastTaskResult || 0) !== 0) return 'danger';
+  const result = Number(task.lastTaskResult || 0);
+  if (result !== 0 && result !== 267011) return 'danger';
   if (!task.enabled || task.state === 'Disabled') return 'info';
   if (task.state === 'Running') return 'warning';
   return 'ok';
@@ -461,6 +464,7 @@ function taskTone(task) {
 function taskResultText(value) {
   if (value === null || value === undefined) return 'Never ran';
   const code = Number(value);
+  if (code === 267011) return 'Never ran';
   return code === 0 ? 'Last result OK' : `Last result ${code}`;
 }
 

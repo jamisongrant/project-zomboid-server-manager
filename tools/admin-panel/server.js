@@ -10,6 +10,7 @@ const envPath = path.join(configDir, 'server.env');
 const modsPath = path.join(configDir, 'mods.json');
 const defaultPort = Number(process.env.PZ_ADMIN_PANEL_PORT || 8787);
 const jobLimit = 40;
+const taskNeverRunResult = 267011;
 
 const envOrder = [
   'PZ_ROOT',
@@ -1235,7 +1236,10 @@ function automationTasksSummary() {
     };
   }
   const tasks = (Array.isArray(parsed) ? parsed : [parsed]).filter(Boolean);
-  const failed = tasks.filter((task) => Number(task.lastTaskResult || 0) !== 0);
+  const failed = tasks.filter((task) => {
+    const result = Number(task.lastTaskResult || 0);
+    return result !== 0 && result !== taskNeverRunResult;
+  });
   return {
     supported: true,
     ok: tasks.length > 0 && failed.length === 0,
