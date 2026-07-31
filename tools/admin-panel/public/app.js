@@ -238,12 +238,70 @@ function renderHealth() {
   renderModUpdateProgress();
   renderStagedHealth();
   renderRestartJustification();
+  renderAutomationDailyPanel();
   renderAutomationStatus();
 }
 
 function formatDate(value) {
   if (!value) return 'Not scheduled';
   return new Date(value).toLocaleString();
+}
+
+function nextWindowStart(startValue) {
+  const value = startValue || '04:00';
+  const [hours, minutes] = value.split(':').map((part) => Number(part));
+  const next = new Date();
+  next.setHours(Number.isFinite(hours) ? hours : 4, Number.isFinite(minutes) ? minutes : 0, 0, 0);
+  if (next <= new Date()) next.setDate(next.getDate() + 1);
+  return next;
+}
+
+function smartAutomationTask() {
+  const tasks = state.health?.automationTasks?.tasks || [];
+  return tasks.find((task) => String(task.name || '').toLowerCase().includes('smart mod refresh'));
+}
+
+function renderAutomationDailyPanel() {
+  const panel = $('#automationDailyPanel');
+  if (!panel) return;
+
+  const health = state.health || {};
+  const automation = health.automationTasks || {};
+  const maintenance = health.automationMaintenance || {};
+  const stagedProgress = health.stagedUpdate?.progress || {};
+  const smartTask = smartAutomationTask();
+  const preflight = state.preflight || {};
+  const backupCount = Number(state.backups.length || health.backups?.length || 0);
+  const windowStart = state.env.PZ_MOD_REFRESH_WINDOW_START || '04:00';
+  const windowEnd = state.env.PZ_MOD_REFRESH_WINDOW_END || '05:00';
+  const nextTaskRun = smartTask?.nextRunTime ? new Date(smartTask.nextRunTime) : nextWindowStart(windowStart);
+
+  const issues = [];
+  if (!smartTask || !smartTask.enabled || smartTask.state === 'Disabled') {
+    issues.push('Enable Automation to schedule the nightly mod refresh task.');
+  }
+  if (!preflight.ok) {
+    issues.push('Mod preflight needs review before automation should touch Workshop files.');
+  }
+  if (backupCount <= 0) {
+    issues.push('Create at least one save backup before trusting automated refreshes.');
+  }
+  if (maintenance.phase === 'failed') {
+    issues.push('The last automation maintenance run failed; review the recorded error.');
+  }
+  if (stagedProgress.phase === 'failed') {
+    issues.push('The last staged refresh failed; prepare a clean staged update before automation continues.');
+  }
+
+  const enabled = Boolean(smartTask && smartTask.enabled && smartTask.state !== 'Disabled');
+  const tone = !enabled ? 'info' : issues.length ? 'warning' : 'ok';
+  panel.className = `automation-hero ${tone === 'ok' ? '' : tone}`.trim();
+  $('#automationDailyState').textContent = !enabled ? 'Not enabled' : issues.length ? 'Needs attention' : 'Green for nightly refresh';
+  $('#automationDailyWhy').textContent = issues.length
+    ? issues[0]
+    : 'Automation can attempt the 4 AM guarded mod refresh. Player count is checked again at run time before any restart.';
+  $('#automationNextRun').textContent = enabled ? formatDate(nextTaskRun) : 'Not scheduled';
+  $('#automationWindow').textContent = `Window ${windowStart}-${windowEnd}`;
 }
 
 function progressPercent(item) {

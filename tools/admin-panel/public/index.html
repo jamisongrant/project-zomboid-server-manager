@@ -196,16 +196,33 @@
         <div class="metric"><span>Staged Update</span><strong id="stagedUpdateState">-</strong></div>
         <div class="metric"><span>Automation</span><strong id="automationState">-</strong></div>
       </div>
-      <div class="action-row">
-        <button data-action="watchdog" title="Check the server and restart it if watchdog rules say it should be recovered.">Run Watchdog</button>
+      <section class="automation-hero" id="automationDailyPanel">
+        <div>
+          <span>Daily mod automation</span>
+          <strong id="automationDailyState">Checking</strong>
+          <p id="automationDailyWhy">Checking scheduled tasks and safety state.</p>
+        </div>
+        <div class="automation-schedule">
+          <span>Next nightly attempt</span>
+          <strong id="automationNextRun">-</strong>
+          <code id="automationWindow">-</code>
+        </div>
+      </section>
+      <div class="action-row primary-actions">
         <button data-action="enableAutomation" title="Register scheduled Windows tasks for hands-off startup/watchdog/update behavior.">Enable Automation</button>
         <button data-action="disableAutomation" title="Disable scheduled Windows tasks. This does not stop the server or delete files.">Disable Automation</button>
         <button data-action="automationCheck" title="Run the automation safety checklist without updating or restarting the server.">Run Automation Check</button>
-        <button data-action="restartPanel" title="Restart only this local admin web panel. The Project Zomboid server keeps running.">Restart Admin Panel</button>
-        <button data-action="shutdownPanel" title="Close only this local admin web panel.">Close Admin Panel</button>
-        <button data-action="installFirewallRules" title="Add Windows Firewall rules for Project Zomboid ports. Requires Administrator permission.">Install Firewall Rules</button>
-        <button data-action="smartRefreshMods" title="Refresh mods only when player activity and the maintenance window allow it.">Smart Mod Refresh</button>
       </div>
+      <details class="manual-tools">
+        <summary>Manual override tools</summary>
+        <div class="action-row">
+          <button data-action="watchdog" title="Check the server and restart it if watchdog rules say it should be recovered.">Run Watchdog</button>
+          <button data-action="restartPanel" title="Restart only this local admin web panel. The Project Zomboid server keeps running.">Restart Admin Panel</button>
+          <button data-action="shutdownPanel" title="Close only this local admin web panel.">Close Admin Panel</button>
+          <button data-action="installFirewallRules" title="Add Windows Firewall rules for Project Zomboid ports. Requires Administrator permission.">Install Firewall Rules</button>
+          <button data-action="smartRefreshMods" title="Refresh mods only when player activity and the maintenance window allow it.">Smart Mod Refresh</button>
+        </div>
+      </details>
       <button class="help-link" type="button" data-help-actions="watchdog,enableAutomation,disableAutomation,automationCheck,restartPanel,shutdownPanel,installFirewallRules,smartRefreshMods">Action Help</button>
       <div class="monitor-grid">
         <section class="monitor-panel">

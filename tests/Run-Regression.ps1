@@ -336,17 +336,17 @@ Add-Check 'Admin UI explains status and risky actions' {
     $appJs = Get-Content -LiteralPath (Join-Path $projectRoot 'tools/admin-panel/public/app.js') -Raw
     $styles = Get-Content -LiteralPath (Join-Path $projectRoot 'tools/admin-panel/public/styles.css') -Raw
 
-    foreach ($required in @('nextStepPanel', 'statusMeaning', 'joinInfo', 'activeActionBanner', 'guidance-panel', 'Advanced Actions', 'modRecoveryPanel', 'Repair From server.ini', 'Restart Admin Panel', 'data-help-actions', 'actionHelpModal', 'Action Help', 'Recent Activity', 'Grooming Forecast', 'backupForecast', 'Prune Logs', 'Mod Update Progress', 'Blue/Green State', 'Restart Recommendation', 'Automation Status', 'automationState', 'automationCheck', 'Run Automation Check')) {
+    foreach ($required in @('nextStepPanel', 'statusMeaning', 'joinInfo', 'activeActionBanner', 'guidance-panel', 'Advanced Actions', 'modRecoveryPanel', 'Repair From server.ini', 'Restart Admin Panel', 'data-help-actions', 'actionHelpModal', 'Action Help', 'Recent Activity', 'Grooming Forecast', 'backupForecast', 'Prune Logs', 'Mod Update Progress', 'Blue/Green State', 'Restart Recommendation', 'Automation Status', 'automationState', 'automationDailyPanel', 'Daily mod automation', 'Next nightly attempt', 'Manual override tools', 'automationCheck', 'Run Automation Check')) {
         if ($index -notmatch [regex]::Escape($required)) {
             throw "Admin UI must include $required."
         }
     }
-    foreach ($required in @('renderNextStep', 'renderModRecoveryPanel', 'renderJobs', 'renderGrooming', 'renderModUpdateProgress', 'renderStagedHealth', 'stagedReadiness', 'Apply readiness', 'Review meaning', 'Re-stage fresh before applying', 'Player count is unknown', 'automationMaintenance', 'No automation safety check', 'renderRestartJustification', 'renderAutomationStatus', 'taskResultText', 'renderActiveActionBanner', 'setActionBusy', 'refreshHealthOnly', 'pollActionJob', 'started in the background', 'openActionHelp', 'closeActionHelp', 'actionDescriptions', 'Smart mod refresh', 'The Project Zomboid server keeps running', 'Apply config + restart', 'Server is starting', '/api/mods/repair')) {
+    foreach ($required in @('renderNextStep', 'renderModRecoveryPanel', 'renderJobs', 'renderGrooming', 'renderModUpdateProgress', 'renderStagedHealth', 'stagedReadiness', 'Apply readiness', 'Review meaning', 'Re-stage fresh before applying', 'Player count is unknown', 'automationMaintenance', 'renderAutomationDailyPanel', 'Green for nightly refresh', 'Player count is checked again at run time', 'No automation safety check', 'renderRestartJustification', 'renderAutomationStatus', 'taskResultText', 'renderActiveActionBanner', 'setActionBusy', 'refreshHealthOnly', 'pollActionJob', 'started in the background', 'openActionHelp', 'closeActionHelp', 'actionDescriptions', 'Smart mod refresh', 'The Project Zomboid server keeps running', 'Apply config + restart', 'Server is starting', '/api/mods/repair')) {
         if ($appJs -notmatch [regex]::Escape($required)) {
             throw "Admin frontend must include explanatory behavior for $required."
         }
     }
-    foreach ($required in @('.guidance-panel', '.status-explainer', '.active-action-banner', '.help-link', '.action-help-modal', '.action-help-card', '.monitor-panel', '.job-row', '.automation-row', '.review-row', '.progress-bar', '.state-pill', '.status-table', 'button.busy')) {
+    foreach ($required in @('.guidance-panel', '.status-explainer', '.automation-hero', '.manual-tools', '.active-action-banner', '.help-link', '.action-help-modal', '.action-help-card', '.monitor-panel', '.job-row', '.automation-row', '.review-row', '.progress-bar', '.state-pill', '.status-table', 'button.busy')) {
         if ($styles -notmatch [regex]::Escape($required)) {
             throw "Admin styles must include $required."
         }
