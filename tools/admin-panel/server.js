@@ -1,7 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 
 const root = path.resolve(__dirname, '..', '..');
 const publicDir = path.join(__dirname, 'public');
@@ -995,6 +995,95 @@ function buildRestartRecommendation(modUpdate, stagedProgress, stagedReady) {
   };
 }
 
+function automationTasksSummary() {
+  if (process.platform !== 'win32') {
+    return {
+      supported: false,
+      ok: false,
+      totalCount: 0,
+      enabledCount: 0,
+      failedCount: 0,
+      tasks: [],
+      message: 'Windows scheduled task status is only available on Windows.'
+    };
+  }
+
+  const command = `
+    $ErrorActionPreference = 'Stop'
+    $tasks = @(Get-ScheduledTask -TaskName 'PZ Vanilla *' -ErrorAction SilentlyContinue)
+    $items = foreach ($task in $tasks) {
+      $info = Get-ScheduledTaskInfo -TaskName $task.TaskName -TaskPath $task.TaskPath -ErrorAction SilentlyContinue
+      [pscustomobject]@{
+        name = $task.TaskName
+        path = $task.TaskPath
+        state = [string]$task.State
+        enabled = ([string]$task.State -ne 'Disabled')
+        lastRunTime = if ($info -and $info.LastRunTime -gt [datetime]'1900-01-01') { $info.LastRunTime.ToString('o') } else { $null }
+        nextRunTime = if ($info -and $info.NextRunTime -gt [datetime]'1900-01-01') { $info.NextRunTime.ToString('o') } else { $null }
+        lastTaskResult = if ($info) { [int]$info.LastTaskResult } else { $null }
+      }
+    }
+    $items | ConvertTo-Json -Depth 4
+  `;
+  const result = spawnSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', command], {
+    cwd: root,
+    encoding: 'utf8',
+    windowsHide: true,
+    timeout: 8000
+  });
+
+  if (result.error) {
+    return {
+      supported: true,
+      ok: false,
+      totalCount: 0,
+      enabledCount: 0,
+      failedCount: 0,
+      tasks: [],
+      message: result.error.message
+    };
+  }
+
+  if (result.status !== 0) {
+    return {
+      supported: true,
+      ok: false,
+      totalCount: 0,
+      enabledCount: 0,
+      failedCount: 0,
+      tasks: [],
+      message: String(result.stderr || result.stdout || 'Unable to read scheduled tasks.').trim()
+    };
+  }
+
+  const text = String(result.stdout || '').trim();
+  let parsed = [];
+  try {
+    parsed = text ? JSON.parse(text) : [];
+  } catch {
+    return {
+      supported: true,
+      ok: false,
+      totalCount: 0,
+      enabledCount: 0,
+      failedCount: 0,
+      tasks: [],
+      message: 'Scheduled task status returned unreadable output.'
+    };
+  }
+  const tasks = (Array.isArray(parsed) ? parsed : [parsed]).filter(Boolean);
+  const failed = tasks.filter((task) => Number(task.lastTaskResult || 0) !== 0);
+  return {
+    supported: true,
+    ok: tasks.length > 0 && failed.length === 0,
+    totalCount: tasks.length,
+    enabledCount: tasks.filter((task) => task.enabled).length,
+    failedCount: failed.length,
+    tasks,
+    message: tasks.length > 0 ? 'Scheduled automation tasks found.' : 'No PZ Vanilla scheduled automation tasks found.'
+  };
+}
+
 function systemHealth() {
   const { stateDir } = envPaths();
   const env = readEnv();
@@ -1027,7 +1116,7 @@ function systemHealth() {
       stagedServerDir,
       rollbackServerDir
     },
-    automationTasks: []
+    automationTasks: automationTasksSummary()
   };
 }
 

@@ -398,6 +398,41 @@ button.primary {
   white-space: normal;
 }
 
+.automation-list {
+  display: grid;
+  gap: 10px;
+}
+
+.automation-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(240px, .8fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(32, 39, 36, .68);
+  padding: 10px;
+}
+
+.automation-row strong,
+.automation-row span {
+  display: block;
+}
+
+.automation-row span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.compact-table {
+  gap: 3px;
+}
+
+.compact-table div {
+  grid-template-columns: 44px minmax(0, 1fr);
+}
+
 .job-list {
   display: grid;
   gap: 8px;

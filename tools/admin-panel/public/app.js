@@ -218,6 +218,7 @@ function renderHealth() {
   $('#logCount').textContent = String(health.logGrooming?.totalCount || health.logs?.length || state.logs.length || 0);
   $('#preflightState').textContent = preflight.ok ? 'Clean' : 'Review';
   $('#stagedUpdateState').textContent = staged.stagedReady ? 'Prepared' : staged.rollbackReady ? 'Rollback Ready' : 'None';
+  $('#automationState').textContent = health.automationTasks?.totalCount ? `${health.automationTasks.enabledCount || 0}/${health.automationTasks.totalCount}` : 'None';
   $('#preflightSummary').textContent = `Workshop ${preflight.workshopCount || 0}, load order ${preflight.loadOrderCount || 0}, duplicate Workshop ${preflight.duplicateWorkshop?.length || 0}, duplicate Mod IDs ${preflight.duplicateMods?.length || 0}`;
 
   $('#healthDetails').innerHTML = [
@@ -234,6 +235,7 @@ function renderHealth() {
   renderModUpdateProgress();
   renderStagedHealth();
   renderRestartJustification();
+  renderAutomationStatus();
 }
 
 function formatDate(value) {
@@ -322,6 +324,58 @@ function renderRestartJustification() {
       <strong>${escapeHtml(recommendation.action || 'No recommendation yet.')}</strong>
     </div>
     <p>${escapeHtml(recommendation.reason || 'No restart justification has been recorded.')}</p>
+  `;
+}
+
+function taskTone(task) {
+  if (Number(task.lastTaskResult || 0) !== 0) return 'danger';
+  if (!task.enabled || task.state === 'Disabled') return 'info';
+  if (task.state === 'Running') return 'warning';
+  return 'ok';
+}
+
+function taskResultText(value) {
+  if (value === null || value === undefined) return 'Never ran';
+  const code = Number(value);
+  return code === 0 ? 'Last result OK' : `Last result ${code}`;
+}
+
+function renderAutomationStatus() {
+  const automation = state.health?.automationTasks || {};
+  if (!automation.supported) {
+    $('#automationStatus').innerHTML = `<div class="empty-row">${escapeHtml(automation.message || 'Automation status is not available here.')}</div>`;
+    return;
+  }
+
+  const tasks = automation.tasks || [];
+  if (tasks.length === 0) {
+    $('#automationStatus').innerHTML = `
+      <div class="progress-heading">
+        ${statusPill('Not enabled', 'info')}
+        <strong>${escapeHtml(automation.message || 'No scheduled automation tasks found.')}</strong>
+      </div>
+    `;
+    return;
+  }
+
+  $('#automationStatus').innerHTML = `
+    <div class="status-table">
+      <div><span>Enabled tasks</span><code>${escapeHtml(String(automation.enabledCount || 0))}/${escapeHtml(String(automation.totalCount || 0))}</code></div>
+      <div><span>Last-run failures</span><code>${escapeHtml(String(automation.failedCount || 0))}</code></div>
+    </div>
+    ${tasks.map((task) => `
+      <div class="automation-row">
+        <div>
+          <strong>${escapeHtml(task.name || 'Scheduled task')}</strong>
+          <span>${escapeHtml(task.state || 'Unknown')} · ${escapeHtml(taskResultText(task.lastTaskResult))}</span>
+        </div>
+        <div class="status-table compact-table">
+          <div><span>Last</span><code>${escapeHtml(formatDate(task.lastRunTime))}</code></div>
+          <div><span>Next</span><code>${escapeHtml(formatDate(task.nextRunTime))}</code></div>
+        </div>
+        ${statusPill(task.enabled ? 'Enabled' : 'Disabled', taskTone(task))}
+      </div>
+    `).join('')}
   `;
 }
 

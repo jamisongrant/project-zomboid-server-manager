@@ -238,7 +238,7 @@ Add-Check 'Mod and staged workflows publish progress state' {
             throw "Staged refresh must publish $required."
         }
     }
-    foreach ($required in @('modUpdate', 'restartRecommendation', 'buildRestartRecommendation', 'staged-update-progress.json', 'backgroundActions', 'accepted')) {
+    foreach ($required in @('modUpdate', 'restartRecommendation', 'automationTasksSummary', 'PZ Vanilla *', 'LastTaskResult', 'buildRestartRecommendation', 'staged-update-progress.json', 'backgroundActions', 'accepted')) {
         if ($serverJs -notmatch [regex]::Escape($required)) {
             throw "Admin health API must expose $required."
         }
@@ -311,17 +311,17 @@ Add-Check 'Admin UI explains status and risky actions' {
     $appJs = Get-Content -LiteralPath (Join-Path $projectRoot 'tools/admin-panel/public/app.js') -Raw
     $styles = Get-Content -LiteralPath (Join-Path $projectRoot 'tools/admin-panel/public/styles.css') -Raw
 
-    foreach ($required in @('nextStepPanel', 'statusMeaning', 'joinInfo', 'activeActionBanner', 'guidance-panel', 'Advanced Actions', 'modRecoveryPanel', 'Repair From server.ini', 'Restart Admin Panel', 'data-help-actions', 'actionHelpModal', 'Action Help', 'Recent Activity', 'Grooming Forecast', 'backupForecast', 'Prune Logs', 'Mod Update Progress', 'Blue/Green State', 'Restart Recommendation')) {
+    foreach ($required in @('nextStepPanel', 'statusMeaning', 'joinInfo', 'activeActionBanner', 'guidance-panel', 'Advanced Actions', 'modRecoveryPanel', 'Repair From server.ini', 'Restart Admin Panel', 'data-help-actions', 'actionHelpModal', 'Action Help', 'Recent Activity', 'Grooming Forecast', 'backupForecast', 'Prune Logs', 'Mod Update Progress', 'Blue/Green State', 'Restart Recommendation', 'Automation Status', 'automationState')) {
         if ($index -notmatch [regex]::Escape($required)) {
             throw "Admin UI must include $required."
         }
     }
-    foreach ($required in @('renderNextStep', 'renderModRecoveryPanel', 'renderJobs', 'renderGrooming', 'renderModUpdateProgress', 'renderStagedHealth', 'renderRestartJustification', 'renderActiveActionBanner', 'setActionBusy', 'refreshHealthOnly', 'pollActionJob', 'started in the background', 'openActionHelp', 'closeActionHelp', 'actionDescriptions', 'Smart mod refresh', 'The Project Zomboid server keeps running', 'Apply config + restart', 'Server is starting', '/api/mods/repair')) {
+    foreach ($required in @('renderNextStep', 'renderModRecoveryPanel', 'renderJobs', 'renderGrooming', 'renderModUpdateProgress', 'renderStagedHealth', 'renderRestartJustification', 'renderAutomationStatus', 'taskResultText', 'renderActiveActionBanner', 'setActionBusy', 'refreshHealthOnly', 'pollActionJob', 'started in the background', 'openActionHelp', 'closeActionHelp', 'actionDescriptions', 'Smart mod refresh', 'The Project Zomboid server keeps running', 'Apply config + restart', 'Server is starting', '/api/mods/repair')) {
         if ($appJs -notmatch [regex]::Escape($required)) {
             throw "Admin frontend must include explanatory behavior for $required."
         }
     }
-    foreach ($required in @('.guidance-panel', '.status-explainer', '.active-action-banner', '.help-link', '.action-help-modal', '.action-help-card', '.monitor-panel', '.job-row', '.progress-bar', '.state-pill', '.status-table', 'button.busy')) {
+    foreach ($required in @('.guidance-panel', '.status-explainer', '.active-action-banner', '.help-link', '.action-help-modal', '.action-help-card', '.monitor-panel', '.job-row', '.automation-row', '.progress-bar', '.state-pill', '.status-table', 'button.busy')) {
         if ($styles -notmatch [regex]::Escape($required)) {
             throw "Admin styles must include $required."
         }
