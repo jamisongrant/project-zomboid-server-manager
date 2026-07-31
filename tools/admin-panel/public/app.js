@@ -599,20 +599,28 @@ async function loadConfigFiles(render = true) {
   if (render) renderConfigFiles();
 }
 
-function renderActionHelp() {
-  all('[data-help-actions]').forEach((container) => {
-    const actions = container.dataset.helpActions.split(',').map((item) => item.trim()).filter(Boolean);
-    container.innerHTML = actions.map((action) => {
-      const label = actionLabels[action] || action;
-      const description = actionDescriptions[action] || 'No description available yet.';
-      return `
-        <div class="action-help-card">
-          <strong>${escapeHtml(label)}</strong>
-          <span>${escapeHtml(description)}</span>
-        </div>
-      `;
-    }).join('');
-  });
+function helpActionsFrom(value) {
+  return String(value || '').split(',').map((item) => item.trim()).filter(Boolean);
+}
+
+function openActionHelp(actions) {
+  const items = helpActionsFrom(actions);
+  $('#actionHelpList').innerHTML = items.map((action) => {
+    const label = actionLabels[action] || action;
+    const description = actionDescriptions[action] || 'No description available yet.';
+    return `
+      <div class="action-help-card">
+        <strong>${escapeHtml(label)}</strong>
+        <span>${escapeHtml(description)}</span>
+      </div>
+    `;
+  }).join('');
+  $('#actionHelpModal').hidden = false;
+  $('#closeActionHelpBtn').focus();
+}
+
+function closeActionHelp() {
+  $('#actionHelpModal').hidden = true;
 }
 
 function hasConfigChanges() {
@@ -773,6 +781,13 @@ function bindUi() {
   $('#closeSetupWizardBtn').addEventListener('click', () => closeSetupWizard());
   $('#setupWizardCancelBtn').addEventListener('click', () => closeSetupWizard());
   $('#setupWizardInstallBtn').addEventListener('click', () => runSetupWizardInstall());
+  $('#closeActionHelpBtn').addEventListener('click', () => closeActionHelp());
+  $('#actionHelpModal').addEventListener('click', (event) => {
+    if (event.target === $('#actionHelpModal')) closeActionHelp();
+  });
+  all('.help-link[data-help-actions]').forEach((button) => {
+    button.addEventListener('click', () => openActionHelp(button.dataset.helpActions));
+  });
   $('#wizardInternetHosting').addEventListener('change', () => {
     if ($('#wizardInternetHosting').checked && !$('#wizardFirewall').disabled) $('#wizardFirewall').checked = true;
   });
@@ -924,6 +939,5 @@ function activateTab(tab) {
 
 bindUi();
 activateTab(location.hash.replace('#', '') || 'overview');
-renderActionHelp();
 refresh().catch((error) => appendOutput(error.message));
 setInterval(() => refresh().catch(() => {}), 10000);

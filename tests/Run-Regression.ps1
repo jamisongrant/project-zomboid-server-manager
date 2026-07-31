@@ -273,17 +273,17 @@ Add-Check 'Admin UI explains status and risky actions' {
     $appJs = Get-Content -LiteralPath (Join-Path $projectRoot 'tools/admin-panel/public/app.js') -Raw
     $styles = Get-Content -LiteralPath (Join-Path $projectRoot 'tools/admin-panel/public/styles.css') -Raw
 
-    foreach ($required in @('nextStepPanel', 'statusMeaning', 'joinInfo', 'guidance-panel', 'Advanced Actions', 'modRecoveryPanel', 'Repair From server.ini', 'Restart Admin Panel', 'data-help-actions')) {
+    foreach ($required in @('nextStepPanel', 'statusMeaning', 'joinInfo', 'guidance-panel', 'Advanced Actions', 'modRecoveryPanel', 'Repair From server.ini', 'Restart Admin Panel', 'data-help-actions', 'actionHelpModal', 'Action Help')) {
         if ($index -notmatch [regex]::Escape($required)) {
             throw "Admin UI must include $required."
         }
     }
-    foreach ($required in @('renderNextStep', 'renderModRecoveryPanel', 'renderActionHelp', 'actionDescriptions', 'Smart mod refresh', 'The Project Zomboid server keeps running', 'Apply config + restart', 'Server is starting', '/api/mods/repair')) {
+    foreach ($required in @('renderNextStep', 'renderModRecoveryPanel', 'openActionHelp', 'closeActionHelp', 'actionDescriptions', 'Smart mod refresh', 'The Project Zomboid server keeps running', 'Apply config + restart', 'Server is starting', '/api/mods/repair')) {
         if ($appJs -notmatch [regex]::Escape($required)) {
             throw "Admin frontend must include explanatory behavior for $required."
         }
     }
-    foreach ($required in @('.guidance-panel', '.status-explainer', '.action-help-card')) {
+    foreach ($required in @('.guidance-panel', '.status-explainer', '.help-link', '.action-help-modal', '.action-help-card')) {
         if ($styles -notmatch [regex]::Escape($required)) {
             throw "Admin styles must include $required."
         }

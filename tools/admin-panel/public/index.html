@@ -55,7 +55,7 @@
         <button data-action="restart" title="Back up saves, stop the server, then start it again.">Restart + Backup</button>
         <button data-action="smartRefreshMods" title="Refresh mods only when player activity and the maintenance window allow it.">Smart Mod Refresh</button>
       </div>
-      <div class="action-help" data-help-actions="start,stop,restart,smartRefreshMods"></div>
+      <button class="help-link" type="button" data-help-actions="start,stop,restart,smartRefreshMods">Action Help</button>
     </section>
 
     <section class="panel" id="setup">
@@ -112,7 +112,7 @@
         <button class="primary" id="saveSettingsBtn">Save Settings</button>
         <button data-action="applyConfigRestart" title="Write config files, back up, restart, and reload the server with current settings.">Apply With Restart</button>
       </div>
-      <div class="action-help" data-help-actions="applyConfigRestart"></div>
+      <button class="help-link" type="button" data-help-actions="applyConfigRestart">Action Help</button>
     </section>
 
     <section class="panel" id="configFiles">
@@ -153,7 +153,7 @@
         <button data-action="refreshMods">Refresh Mods</button>
         <button data-action="smartRefreshMods">Smart Refresh</button>
       </div>
-      <div class="action-help" data-help-actions="refreshMods,smartRefreshMods,prepareStagedUpdate,stagedRefresh"></div>
+      <button class="help-link" type="button" data-help-actions="refreshMods,smartRefreshMods,prepareStagedUpdate,stagedRefresh">Action Help</button>
       <div class="mod-summary">
         <span id="modHealth">No mod check yet</span>
       </div>
@@ -201,7 +201,7 @@
         <button data-action="installFirewallRules" title="Add Windows Firewall rules for Project Zomboid ports. Requires Administrator permission.">Install Firewall Rules</button>
         <button data-action="smartRefreshMods" title="Refresh mods only when player activity and the maintenance window allow it.">Smart Mod Refresh</button>
       </div>
-      <div class="action-help" data-help-actions="watchdog,enableAutomation,disableAutomation,restartPanel,shutdownPanel,installFirewallRules,smartRefreshMods"></div>
+      <button class="help-link" type="button" data-help-actions="watchdog,enableAutomation,disableAutomation,restartPanel,shutdownPanel,installFirewallRules,smartRefreshMods">Action Help</button>
       <div class="path-list" id="healthDetails"></div>
     </section>
 
@@ -214,7 +214,7 @@
         <button data-action="backup">Backup Saves</button>
         <button id="refreshBackupsBtn">Refresh Backups</button>
       </div>
-      <div class="action-help" data-help-actions="backup"></div>
+      <button class="help-link" type="button" data-help-actions="backup">Action Help</button>
       <div id="backupList" class="backup-list"></div>
     </section>
 
@@ -253,7 +253,7 @@
         <button data-action="applyConfig">Apply Config</button>
         <button data-action="pruneBackups">Prune Backups</button>
       </div>
-      <div class="action-help" data-help-actions="backup,update,updateMods,refreshMods,smartRefreshMods,prepareStagedUpdate,stagedRefresh,rollbackStagedUpdate,enableAutomation,disableAutomation,restartPanel,shutdownPanel,installFirewallRules,applyConfig,pruneBackups"></div>
+      <button class="help-link" type="button" data-help-actions="backup,update,updateMods,refreshMods,smartRefreshMods,prepareStagedUpdate,stagedRefresh,rollbackStagedUpdate,enableAutomation,disableAutomation,restartPanel,shutdownPanel,installFirewallRules,applyConfig,pruneBackups">Action Help</button>
       <div class="path-list">
         <div><span>Env</span><code id="envPath"></code></div>
         <div><span>Server ini</span><code id="iniPath"></code></div>
@@ -265,6 +265,16 @@
       <pre id="output"></pre>
     </section>
   </main>
+
+  <div id="actionHelpModal" class="modal-backdrop" hidden>
+    <div class="modal action-help-modal" role="dialog" aria-modal="true" aria-labelledby="actionHelpTitle">
+      <div class="modal-header">
+        <h2 id="actionHelpTitle">Action Help</h2>
+        <button id="closeActionHelpBtn" class="icon-button" type="button" title="Close">×</button>
+      </div>
+      <div id="actionHelpList" class="action-help-list"></div>
+    </div>
+  </div>
 
   <div id="setupModal" class="modal-backdrop" hidden>
     <div class="modal setup-modal" role="dialog" aria-modal="true" aria-labelledby="setupWizardTitle">

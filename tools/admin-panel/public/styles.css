@@ -57,12 +57,20 @@ p {
   gap: 10px;
 }
 
-.action-help {
+.help-link {
+  min-height: 32px;
+  margin: 10px 0 16px;
+  padding: 6px 10px;
+  color: var(--muted);
+  background: transparent;
+}
+
+.action-help-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 10px;
-  max-width: 1180px;
-  margin: 12px 0 18px;
+  max-height: min(68vh, 620px);
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .action-help-card {
@@ -87,6 +95,10 @@ p {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.35;
+}
+
+.action-help-modal {
+  width: min(720px, calc(100vw - 28px));
 }
 
 .badge {
