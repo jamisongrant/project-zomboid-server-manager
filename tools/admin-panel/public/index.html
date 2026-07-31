@@ -189,6 +189,7 @@
         <div class="metric"><span>Players</span><strong id="playerCount">-</strong></div>
         <div class="metric"><span>Watchdog</span><strong id="watchdogState">-</strong></div>
         <div class="metric"><span>Backups</span><strong id="backupCount">-</strong></div>
+        <div class="metric"><span>Logs</span><strong id="logCount">-</strong></div>
         <div class="metric"><span>Mod Preflight</span><strong id="preflightState">-</strong></div>
         <div class="metric"><span>Staged Update</span><strong id="stagedUpdateState">-</strong></div>
       </div>
@@ -202,6 +203,16 @@
         <button data-action="smartRefreshMods" title="Refresh mods only when player activity and the maintenance window allow it.">Smart Mod Refresh</button>
       </div>
       <button class="help-link" type="button" data-help-actions="watchdog,enableAutomation,disableAutomation,restartPanel,shutdownPanel,installFirewallRules,smartRefreshMods">Action Help</button>
+      <div class="monitor-grid">
+        <section class="monitor-panel">
+          <h2>Recent Activity</h2>
+          <div id="jobList" class="job-list"></div>
+        </section>
+        <section class="monitor-panel">
+          <h2>Grooming Forecast</h2>
+          <div id="groomingSummary" class="path-list"></div>
+        </section>
+      </div>
       <div class="path-list" id="healthDetails"></div>
     </section>
 
@@ -215,6 +226,7 @@
         <button id="refreshBackupsBtn">Refresh Backups</button>
       </div>
       <button class="help-link" type="button" data-help-actions="backup">Action Help</button>
+      <div class="mod-summary" id="backupForecast">Backup retention not loaded.</div>
       <div id="backupList" class="backup-list"></div>
     </section>
 
@@ -252,8 +264,9 @@
         <button data-action="installFirewallRules">Firewall Rules</button>
         <button data-action="applyConfig">Apply Config</button>
         <button data-action="pruneBackups">Prune Backups</button>
+        <button data-action="pruneLogs">Prune Logs</button>
       </div>
-      <button class="help-link" type="button" data-help-actions="backup,update,updateMods,refreshMods,smartRefreshMods,prepareStagedUpdate,stagedRefresh,rollbackStagedUpdate,enableAutomation,disableAutomation,restartPanel,shutdownPanel,installFirewallRules,applyConfig,pruneBackups">Action Help</button>
+      <button class="help-link" type="button" data-help-actions="backup,update,updateMods,refreshMods,smartRefreshMods,prepareStagedUpdate,stagedRefresh,rollbackStagedUpdate,enableAutomation,disableAutomation,restartPanel,shutdownPanel,installFirewallRules,applyConfig,pruneBackups,pruneLogs">Action Help</button>
       <div class="path-list">
         <div><span>Env</span><code id="envPath"></code></div>
         <div><span>Server ini</span><code id="iniPath"></code></div>

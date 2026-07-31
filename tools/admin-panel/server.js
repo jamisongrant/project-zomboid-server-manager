@@ -9,6 +9,7 @@ const configDir = path.join(root, 'config');
 const envPath = path.join(configDir, 'server.env');
 const modsPath = path.join(configDir, 'mods.json');
 const defaultPort = Number(process.env.PZ_ADMIN_PANEL_PORT || 8787);
+const jobLimit = 40;
 
 const envOrder = [
   'PZ_ROOT',
@@ -34,6 +35,7 @@ const envOrder = [
   'PZ_UDP_PORT',
   'PZ_RCON_PORT',
   'PZ_BACKUP_RETENTION_DAYS',
+  'PZ_LOG_RETENTION_DAYS',
   'PZ_WATCHDOG_MIN_RESTART_SECONDS',
   'PZ_MOD_WARNING_SECONDS',
   'PZ_AUTO_REFRESH_MODS',
@@ -77,6 +79,7 @@ const actions = {
   watchdog: ['scripts\\ops\\Watchdog-PzServer.ps1'],
   applyConfig: ['scripts\\ops\\Apply-Config.ps1'],
   pruneBackups: ['scripts\\ops\\Prune-Backups.ps1'],
+  pruneLogs: ['internal:pruneLogs'],
   updateMods: ['scripts\\ops\\Update-PzMods.ps1'],
   refreshMods: ['scripts\\ops\\Refresh-PzMods.ps1'],
   smartRefreshMods: ['scripts\\ops\\Invoke-PzSmartModRefresh.ps1'],
@@ -757,6 +760,70 @@ function envPaths() {
   };
 }
 
+function statePath(name) {
+  const { stateDir } = envPaths();
+  fs.mkdirSync(stateDir, { recursive: true });
+  return path.join(stateDir, name);
+}
+
+function readJobs() {
+  const filePath = statePath('admin-jobs.json');
+  if (!fs.existsSync(filePath)) return [];
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeJobs(jobs) {
+  fs.writeFileSync(statePath('admin-jobs.json'), `${JSON.stringify(jobs.slice(0, jobLimit), null, 2)}\n`, 'utf8');
+}
+
+function startJob(action, label) {
+  const job = {
+    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    action,
+    label,
+    status: 'running',
+    startedAt: new Date().toISOString(),
+    finishedAt: '',
+    code: null,
+    summary: 'Action started.',
+    stdoutTail: '',
+    stderrTail: ''
+  };
+  writeJobs([job, ...readJobs()]);
+  return job;
+}
+
+function finishJob(job, result) {
+  const jobs = readJobs();
+  const existing = jobs.find((item) => item.id === job.id) || job;
+  existing.status = result.code === 0 ? 'succeeded' : 'failed';
+  existing.finishedAt = new Date().toISOString();
+  existing.code = result.code;
+  existing.summary = result.code === 0 ? 'Action completed.' : 'Action failed.';
+  existing.stdoutTail = String(result.stdout || '').slice(-3000);
+  existing.stderrTail = String(result.stderr || '').slice(-3000);
+  writeJobs([existing, ...jobs.filter((item) => item.id !== job.id)]);
+  return existing;
+}
+
+async function runTrackedAction(action, runner) {
+  const label = action.replace(/([A-Z])/g, ' $1').replace(/^./, (value) => value.toUpperCase());
+  const job = startJob(action, label);
+  try {
+    const result = await runner();
+    const finished = finishJob(job, result);
+    return { ...result, job: finished };
+  } catch (error) {
+    const finished = finishJob(job, { code: 1, stdout: '', stderr: error.message });
+    throw Object.assign(error, { job: finished });
+  }
+}
+
 function listBackups() {
   const { backupDir } = envPaths();
   if (!fs.existsSync(backupDir)) return [];
@@ -770,7 +837,37 @@ function listBackups() {
     .sort((a, b) => b.modified.localeCompare(a.modified));
 }
 
-function listLogs() {
+function retentionDays(envKey, fallback) {
+  const env = readEnv();
+  const value = Number(env[envKey] || fallback);
+  return Number.isFinite(value) && value >= 0 ? value : fallback;
+}
+
+function backupGroomingSummary() {
+  const retention = retentionDays('PZ_BACKUP_RETENTION_DAYS', 14);
+  const now = Date.now();
+  const backups = listBackups();
+  const items = backups.map((backup) => {
+    const modified = new Date(backup.modified);
+    const deleteAt = new Date(modified.getTime() + retention * 86400000);
+    return {
+      ...backup,
+      deleteAt: deleteAt.toISOString(),
+      deleteInDays: Math.ceil((deleteAt.getTime() - now) / 86400000),
+      eligible: deleteAt.getTime() <= now
+    };
+  });
+  return {
+    retentionDays: retention,
+    totalCount: backups.length,
+    totalBytes: backups.reduce((sum, backup) => sum + Number(backup.size || 0), 0),
+    eligibleCount: items.filter((item) => item.eligible).length,
+    nextDeleteAt: items.filter((item) => !item.eligible).sort((a, b) => a.deleteAt.localeCompare(b.deleteAt))[0]?.deleteAt || '',
+    upcoming: items.sort((a, b) => a.deleteAt.localeCompare(b.deleteAt)).slice(0, 8)
+  };
+}
+
+function collectLogs() {
   const { logDir, profileDir } = envPaths();
   const dirs = [logDir, path.join(profileDir, 'Logs')];
   const logs = [];
@@ -783,11 +880,15 @@ function listLogs() {
       logs.push({ name, fullPath, size: stat.size, modified: stat.mtime.toISOString() });
     }
   }
-  return logs.sort((a, b) => b.modified.localeCompare(a.modified)).slice(0, 80);
+  return logs.sort((a, b) => b.modified.localeCompare(a.modified));
+}
+
+function listLogs() {
+  return collectLogs().slice(0, 80);
 }
 
 function tailFile(fullPath, maxBytes = 12000) {
-  const logs = listLogs();
+  const logs = collectLogs();
   const allowed = logs.some((log) => log.fullPath === fullPath);
   if (!allowed) throw new Error('Log file is not in an allowed log directory.');
   const stat = fs.statSync(fullPath);
@@ -827,6 +928,9 @@ function systemHealth() {
     adminPanelPid: fs.existsSync(adminPidPath) ? fs.readFileSync(adminPidPath, 'utf8').trim() : '',
     backups: listBackups().slice(0, 5),
     logs: listLogs().slice(0, 8),
+    jobs: readJobs().slice(0, 10),
+    backupGrooming: backupGroomingSummary(),
+    logGrooming: logGroomingSummary(),
     stagedUpdate: {
       stagedReady: fs.existsSync(stagedServerDir),
       rollbackReady: fs.existsSync(rollbackServerDir),
@@ -855,6 +959,47 @@ function modPreflight() {
     missingNames,
     recoveredFromIni: Boolean(modState.recoveredFromIni),
     ok: duplicateWorkshop.length === 0 && unavailable.length === 0
+  };
+}
+
+function logGroomingSummary() {
+  const retention = retentionDays('PZ_LOG_RETENTION_DAYS', 14);
+  const now = Date.now();
+  const logs = collectLogs();
+  const items = logs.map((log) => {
+    const modified = new Date(log.modified);
+    const deleteAt = new Date(modified.getTime() + retention * 86400000);
+    return {
+      ...log,
+      deleteAt: deleteAt.toISOString(),
+      deleteInDays: Math.ceil((deleteAt.getTime() - now) / 86400000),
+      eligible: deleteAt.getTime() <= now
+    };
+  });
+  return {
+    retentionDays: retention,
+    totalCount: logs.length,
+    totalBytes: logs.reduce((sum, log) => sum + Number(log.size || 0), 0),
+    eligibleCount: items.filter((item) => item.eligible).length,
+    nextDeleteAt: items.filter((item) => !item.eligible).sort((a, b) => a.deleteAt.localeCompare(b.deleteAt))[0]?.deleteAt || '',
+    upcoming: items.sort((a, b) => a.deleteAt.localeCompare(b.deleteAt)).slice(0, 8)
+  };
+}
+
+function pruneLogs() {
+  const retention = retentionDays('PZ_LOG_RETENTION_DAYS', 14);
+  const cutoff = Date.now() - retention * 86400000;
+  const logs = collectLogs();
+  const removed = [];
+  for (const log of logs) {
+    if (new Date(log.modified).getTime() >= cutoff) continue;
+    fs.unlinkSync(log.fullPath);
+    removed.push(log.fullPath);
+  }
+  return {
+    code: 0,
+    stdout: `Log pruning complete. Retention: ${retention} days. Removed ${removed.length} file(s).\n${removed.join('\n')}`,
+    stderr: ''
   };
 }
 
@@ -1106,12 +1251,12 @@ async function route(req, res) {
           sendJson(res, 404, { ok: false, error: 'Backup not found.' });
           return;
         }
-        const result = await runPowerShellDynamic('scripts\\ops\\Restore-PzBackup.ps1', ['-BackupPath', backup.fullPath, '-Restart']);
+        const result = await runTrackedAction('restoreBackup', () => runPowerShellDynamic('scripts\\ops\\Restore-PzBackup.ps1', ['-BackupPath', backup.fullPath, '-Restart']));
         sendJson(res, result.code === 0 ? 200 : 500, { ok: result.code === 0, ...result });
         return;
       }
       if (body.action === 'applyConfigRestart') {
-        const result = await runApplyConfigThenRestart();
+        const result = await runTrackedAction('applyConfigRestart', () => runApplyConfigThenRestart());
         sendJson(res, result.code === 0 ? 200 : 500, { ok: result.code === 0, ...result });
         return;
       }
@@ -1119,7 +1264,10 @@ async function route(req, res) {
         sendJson(res, 400, { ok: false, error: 'Unknown action.' });
         return;
       }
-      const result = await runPowerShell(actions[body.action]);
+      const result = await runTrackedAction(body.action, () => {
+        if (body.action === 'pruneLogs') return Promise.resolve(pruneLogs());
+        return runPowerShell(actions[body.action]);
+      });
       sendJson(res, result.code === 0 ? 200 : 500, { ok: result.code === 0, ...result });
       return;
     }

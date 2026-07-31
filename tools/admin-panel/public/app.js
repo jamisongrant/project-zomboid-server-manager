@@ -52,7 +52,8 @@ const actionLabels = {
   installFirewallRules: 'Install firewall rules',
   applyConfig: 'Apply config',
   applyConfigRestart: 'Apply config + restart',
-  pruneBackups: 'Prune backups'
+  pruneBackups: 'Prune backups',
+  pruneLogs: 'Prune logs'
 };
 
 const actionConfirmations = {
@@ -68,7 +69,8 @@ const actionConfirmations = {
   enableAutomation: 'Enable scheduled background tasks for startup, watchdog, restart, and updates?',
   disableAutomation: 'Disable scheduled background tasks? This does not stop the running server.',
   shutdownPanel: 'Close only the admin panel? The Project Zomboid server will keep running.',
-  restartPanel: 'Restart only the admin panel? The Project Zomboid server will keep running.'
+  restartPanel: 'Restart only the admin panel? The Project Zomboid server will keep running.',
+  pruneLogs: 'Delete old log files according to retention settings? This does not delete backups or saves.'
 };
 
 const actionDescriptions = {
@@ -91,7 +93,8 @@ const actionDescriptions = {
   installFirewallRules: 'Adds Windows Firewall rules for Project Zomboid ports. Router port forwarding is still separate.',
   applyConfig: 'Writes saved manager settings into the active server files without restarting the server.',
   applyConfigRestart: 'Writes config, backs up saves, then restarts so Project Zomboid actually loads the changes.',
-  pruneBackups: 'Deletes old backups according to retention settings. Does not delete the active world save.'
+  pruneBackups: 'Deletes old backups according to retention settings. Does not delete the active world save.',
+  pruneLogs: 'Deletes old manager and Project Zomboid log files according to log retention settings.'
 };
 
 function $(selector) {
@@ -197,6 +200,7 @@ function renderHealth() {
   $('#playerCount').textContent = health.players?.PlayerCount ?? '-';
   $('#watchdogState').textContent = watchdog.running === true ? 'Healthy' : watchdog.maintenance ? 'Maintenance' : 'Unknown';
   $('#backupCount').textContent = String(state.backups.length || health.backups?.length || 0);
+  $('#logCount').textContent = String(health.logGrooming?.totalCount || health.logs?.length || state.logs.length || 0);
   $('#preflightState').textContent = preflight.ok ? 'Clean' : 'Review';
   $('#stagedUpdateState').textContent = staged.stagedReady ? 'Prepared' : staged.rollbackReady ? 'Rollback Ready' : 'None';
   $('#preflightSummary').textContent = `Workshop ${preflight.workshopCount || 0}, load order ${preflight.loadOrderCount || 0}, duplicate Workshop ${preflight.duplicateWorkshop?.length || 0}, duplicate Mod IDs ${preflight.duplicateMods?.length || 0}`;
@@ -208,6 +212,40 @@ function renderHealth() {
     ['Rollback server', staged.rollbackReady ? staged.rollbackServerDir : 'None'],
     ['Duplicate Workshop IDs', (preflight.duplicateWorkshop || []).join(', ') || 'None'],
     ['Duplicate Mod IDs', (preflight.duplicateMods || []).join(', ') || 'None']
+  ].map(([label, value]) => `<div><span>${escapeHtml(label)}</span><code>${escapeHtml(value)}</code></div>`).join('');
+
+  renderJobs();
+  renderGrooming();
+}
+
+function formatDate(value) {
+  if (!value) return 'Not scheduled';
+  return new Date(value).toLocaleString();
+}
+
+function renderJobs() {
+  const jobs = state.health?.jobs || [];
+  $('#jobList').innerHTML = jobs.length === 0
+    ? '<div class="empty-row">No recorded actions yet.</div>'
+    : jobs.map((job) => `
+      <div class="job-row ${escapeHtml(job.status || '')}">
+        <div>
+          <strong>${escapeHtml(job.label || job.action || 'Action')}</strong>
+          <span>${escapeHtml(job.summary || '')}</span>
+        </div>
+        <code>${escapeHtml(job.status || 'unknown')} · ${escapeHtml(formatDate(job.startedAt))}</code>
+      </div>
+    `).join('');
+}
+
+function renderGrooming() {
+  const backup = state.health?.backupGrooming || {};
+  const logs = state.health?.logGrooming || {};
+  $('#groomingSummary').innerHTML = [
+    ['Backup retention', `${backup.retentionDays ?? '-'} days; ${backup.eligibleCount || 0} eligible now; next delete ${formatDate(backup.nextDeleteAt)}`],
+    ['Backup storage', `${backup.totalCount || 0} backups · ${formatBytes(backup.totalBytes || 0)}`],
+    ['Log retention', `${logs.retentionDays ?? '-'} days; ${logs.eligibleCount || 0} eligible now; next delete ${formatDate(logs.nextDeleteAt)}`],
+    ['Log storage', `${logs.totalCount || 0} files · ${formatBytes(logs.totalBytes || 0)}`]
   ].map(([label, value]) => `<div><span>${escapeHtml(label)}</span><code>${escapeHtml(value)}</code></div>`).join('');
 }
 
@@ -474,6 +512,8 @@ function renderPendingMods(pendingMods, checkedCount) {
 
 function renderBackups() {
   const list = $('#backupList');
+  const grooming = state.health?.backupGrooming || {};
+  $('#backupForecast').textContent = `Retention ${grooming.retentionDays ?? '-'} days. ${grooming.eligibleCount || 0} backup${grooming.eligibleCount === 1 ? '' : 's'} eligible now. Next scheduled deletion: ${formatDate(grooming.nextDeleteAt)}.`;
   if (!state.backups.length) {
     list.innerHTML = '<div class="empty-row">No save backups found.</div>';
     return;
@@ -732,7 +772,8 @@ async function runAction(action) {
     method: 'POST',
     body: JSON.stringify({ action })
   });
-  appendOutput([result.stdout, result.stderr].filter(Boolean).join('\n') || `${label} completed.`);
+  const jobLine = result.job ? `Job ${result.job.status}: ${result.job.summary}` : '';
+  appendOutput([jobLine, result.stdout, result.stderr].filter(Boolean).join('\n') || `${label} completed.`);
   if (action === 'shutdownPanel') {
     appendOutput('Admin panel closed. Run Open-AdminPanel.ps1 to reopen it.');
     return;
@@ -746,7 +787,8 @@ async function runRestore(name) {
     method: 'POST',
     body: JSON.stringify({ action: 'restoreBackup', name })
   });
-  appendOutput([result.stdout, result.stderr].filter(Boolean).join('\n') || 'Restore completed.');
+  const jobLine = result.job ? `Job ${result.job.status}: ${result.job.summary}` : '';
+  appendOutput([jobLine, result.stdout, result.stderr].filter(Boolean).join('\n') || 'Restore completed.');
   await refresh();
 }
 
