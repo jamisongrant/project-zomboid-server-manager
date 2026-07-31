@@ -48,6 +48,7 @@ const actionLabels = {
   watchdog: 'Run watchdog',
   enableAutomation: 'Enable automation',
   disableAutomation: 'Disable automation',
+  automationCheck: 'Run automation check',
   shutdownPanel: 'Close admin panel',
   restartPanel: 'Restart admin panel',
   installFirewallRules: 'Install firewall rules',
@@ -69,6 +70,7 @@ const actionConfirmations = {
   installFirewallRules: 'Install Windows Firewall rules now? This requires Administrator permission.',
   enableAutomation: 'Enable scheduled background tasks for startup, watchdog, restart, and updates?',
   disableAutomation: 'Disable scheduled background tasks? This does not stop the running server.',
+  automationCheck: 'Run the automation safety checklist now? This does not update, restart, or change files.',
   shutdownPanel: 'Close only the admin panel? The Project Zomboid server will keep running.',
   restartPanel: 'Restart only the admin panel? The Project Zomboid server will keep running.',
   pruneLogs: 'Delete old log files according to retention settings? This does not delete backups or saves.'
@@ -78,7 +80,7 @@ const actionDescriptions = {
   start: 'Starts the Project Zomboid server with the current saved config. Wait for Ready before players join.',
   stop: 'Saves and stops the Project Zomboid server. Everyone connected will be disconnected.',
   restart: 'Creates a save backup, stops the server, then starts it again. Use after normal config changes.',
-  smartRefreshMods: 'Checks the maintenance window and player activity before doing a staged mod/server refresh. Best hands-off option.',
+  smartRefreshMods: 'Runs the guarded automation maintenance flow: checks mod config, player activity, backups, and the maintenance window before doing a staged refresh.',
   prepareStagedUpdate: 'Downloads server and Workshop updates into the staging folder while the active server can keep running.',
   stagedRefresh: 'Applies the already prepared staged update. Use Stage Pending Updates or Prepare Staged Update first.',
   rollbackStagedUpdate: 'Reverts to the previous staged server copy if a staged refresh broke startup or mod loading.',
@@ -89,6 +91,7 @@ const actionDescriptions = {
   watchdog: 'Checks whether the server appears unhealthy and restarts it when watchdog rules say recovery is needed.',
   enableAutomation: 'Registers Windows scheduled tasks for startup, watchdog, backups, and optional smart mod refresh.',
   disableAutomation: 'Turns off scheduled manager tasks. It does not stop the currently running server.',
+  automationCheck: 'Runs the same safety checks automation uses, but stops before downloads, updates, or restarts.',
   shutdownPanel: 'Closes only this local web admin panel. The Project Zomboid server keeps running.',
   restartPanel: 'Restarts only the local web admin panel. Use when the UI is stale or disconnected.',
   installFirewallRules: 'Adds Windows Firewall rules for Project Zomboid ports. Router port forwarding is still separate.',
@@ -347,6 +350,8 @@ function stagedReadiness(staged, progress) {
       : { status: 'Review', tone: 'warning', text: 'Mod preflight needs review before applying staged files.' },
     players === 0
       ? { status: 'OK', tone: 'ok', text: 'No players are currently detected online.' }
+      : players < 0
+        ? { status: 'Review', tone: 'warning', text: 'Player count is unknown. Avoid applying staged files until RCON/player status is clear.' }
       : { status: 'Wait', tone: 'warning', text: `${players} player${players === 1 ? '' : 's'} detected online. Applying staged refresh will disconnect them.` },
     backupCount > 0
       ? { status: 'OK', tone: 'ok', text: `${backupCount} backup${backupCount === 1 ? '' : 's'} visible to the manager.` }
@@ -392,14 +397,39 @@ function taskResultText(value) {
 
 function renderAutomationStatus() {
   const automation = state.health?.automationTasks || {};
+  const maintenance = state.health?.automationMaintenance || {};
+  const maintenanceBlock = maintenance.phase ? `
+    <div class="progress-heading">
+      ${statusPill(maintenance.phase || 'unknown', phaseTone(maintenance.phase))}
+      <strong>${escapeHtml(maintenance.status || 'No automation decision recorded.')}</strong>
+    </div>
+    <div class="status-table">
+      <div><span>Decision</span><code>${escapeHtml(maintenance.decision || '-')}</code></div>
+      <div><span>Check only</span><code>${maintenance.checkOnly ? 'Yes' : 'No'}</code></div>
+      <div><span>Last checked</span><code>${escapeHtml(formatDate(maintenance.updatedAt || maintenance.finishedAt))}</code></div>
+      ${maintenance.lastError ? `<div><span>Last error</span><code>${escapeHtml(maintenance.lastError)}</code></div>` : ''}
+    </div>
+    ${(maintenance.checks || []).length ? `
+      <div class="review-list">
+        ${maintenance.checks.map((check) => `
+          <div class="review-row ${escapeHtml(check.ok ? 'ok' : check.severity || 'warning')}">
+            ${statusPill(check.ok ? 'OK' : 'Review', check.ok ? 'ok' : check.severity || 'warning')}
+            <span><strong>${escapeHtml(check.label || check.id || 'Check')}</strong>: ${escapeHtml(check.message || '')}</span>
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
+  ` : '<div class="empty-row">No automation safety check has been recorded yet. Use Run Automation Check before trusting scheduled refreshes.</div>';
+
   if (!automation.supported) {
-    $('#automationStatus').innerHTML = `<div class="empty-row">${escapeHtml(automation.message || 'Automation status is not available here.')}</div>`;
+    $('#automationStatus').innerHTML = `${maintenanceBlock}<div class="empty-row">${escapeHtml(automation.message || 'Automation status is not available here.')}</div>`;
     return;
   }
 
   const tasks = automation.tasks || [];
   if (tasks.length === 0) {
     $('#automationStatus').innerHTML = `
+      ${maintenanceBlock}
       <div class="progress-heading">
         ${statusPill('Not enabled', 'info')}
         <strong>${escapeHtml(automation.message || 'No scheduled automation tasks found.')}</strong>
@@ -409,6 +439,7 @@ function renderAutomationStatus() {
   }
 
   $('#automationStatus').innerHTML = `
+    ${maintenanceBlock}
     <div class="status-table">
       <div><span>Enabled tasks</span><code>${escapeHtml(String(automation.enabledCount || 0))}/${escapeHtml(String(automation.totalCount || 0))}</code></div>
       <div><span>Last-run failures</span><code>${escapeHtml(String(automation.failedCount || 0))}</code></div>

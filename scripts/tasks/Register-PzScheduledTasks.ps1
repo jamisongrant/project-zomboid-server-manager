@@ -24,7 +24,7 @@ $startScript = Join-Path $config.ProjectRoot 'scripts\ops\Start-PzServer.ps1'
 $watchdogScript = Join-Path $config.ProjectRoot 'scripts\ops\Watchdog-PzServer.ps1'
 $restartScript = Join-Path $config.ProjectRoot 'scripts\ops\Restart-PzServer.ps1'
 $updateScript = Join-Path $config.ProjectRoot 'scripts\ops\Update-PzServer.ps1'
-$smartModRefreshScript = Join-Path $config.ProjectRoot 'scripts\ops\Invoke-PzSmartModRefresh.ps1'
+$smartModRefreshScript = Join-Path $config.ProjectRoot 'scripts\ops\Invoke-PzAutomationMaintenance.ps1'
 $adminPanelScript = Join-Path $config.ProjectRoot 'tools\admin-panel\Start-AdminPanel.ps1'
 
 $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Highest

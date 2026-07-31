@@ -82,7 +82,8 @@ const actions = {
   pruneLogs: ['internal:pruneLogs'],
   updateMods: ['scripts\\ops\\Update-PzMods.ps1'],
   refreshMods: ['scripts\\ops\\Refresh-PzMods.ps1'],
-  smartRefreshMods: ['scripts\\ops\\Invoke-PzSmartModRefresh.ps1'],
+  smartRefreshMods: ['scripts\\ops\\Invoke-PzAutomationMaintenance.ps1'],
+  automationCheck: ['scripts\\ops\\Invoke-PzAutomationMaintenance.ps1', '-CheckOnly', '-IgnoreWindow'],
   prepareStagedUpdate: ['scripts\\ops\\Prepare-PzStagedUpdate.ps1'],
   stagedRefresh: ['scripts\\ops\\Invoke-PzStagedRefresh.ps1', '-SkipPrepare'],
   rollbackStagedUpdate: ['scripts\\ops\\Rollback-PzStagedUpdate.ps1', '-Restart'],
@@ -95,6 +96,7 @@ const backgroundActions = new Set([
   'updateMods',
   'refreshMods',
   'smartRefreshMods',
+  'automationCheck',
   'prepareStagedUpdate',
   'stagedRefresh',
   'rollbackStagedUpdate',
@@ -1203,6 +1205,7 @@ function systemHealth() {
   const adminPidPath = path.join(stateDir, 'admin-panel.pid');
   const modUpdate = readJsonIfExists(path.join(stateDir, 'mod-update.json'));
   const stagedProgress = readJsonIfExists(path.join(stateDir, 'staged-update-progress.json'));
+  const automationMaintenance = readJsonIfExists(path.join(stateDir, 'automation-maintenance.json'));
   const stagedReady = fs.existsSync(stagedServerDir);
   return {
     watchdog: readJsonIfExists(statusPath),
@@ -1214,6 +1217,7 @@ function systemHealth() {
     backupGrooming: backupGroomingSummary(),
     logGrooming: logGroomingSummary(),
     modUpdate,
+    automationMaintenance,
     restartRecommendation: buildRestartRecommendation(modUpdate, stagedProgress, stagedReady),
     stagedUpdate: {
       stagedReady,
