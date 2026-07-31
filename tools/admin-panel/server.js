@@ -84,12 +84,22 @@ const actions = {
   refreshMods: ['scripts\\ops\\Refresh-PzMods.ps1'],
   smartRefreshMods: ['scripts\\ops\\Invoke-PzSmartModRefresh.ps1'],
   prepareStagedUpdate: ['scripts\\ops\\Prepare-PzStagedUpdate.ps1'],
-  stagedRefresh: ['scripts\\ops\\Invoke-PzStagedRefresh.ps1'],
+  stagedRefresh: ['scripts\\ops\\Invoke-PzStagedRefresh.ps1', '-SkipPrepare'],
   rollbackStagedUpdate: ['scripts\\ops\\Rollback-PzStagedUpdate.ps1', '-Restart'],
   installFirewallRules: ['scripts\\ops\\Install-PzFirewallRules.ps1'],
   enableAutomation: ['scripts\\tasks\\Register-PzScheduledTasks.ps1', '-IncludeSmartModRefresh'],
   disableAutomation: ['scripts\\tasks\\Disable-PzAutomation.ps1']
 };
+
+const backgroundActions = new Set([
+  'updateMods',
+  'refreshMods',
+  'smartRefreshMods',
+  'prepareStagedUpdate',
+  'stagedRefresh',
+  'rollbackStagedUpdate',
+  'update'
+]);
 
 const settingEnvKeys = {
   PublicName: 'PZ_PUBLIC_NAME',
@@ -824,6 +834,16 @@ async function runTrackedAction(action, runner) {
   }
 }
 
+function runTrackedActionInBackground(action, runner) {
+  const label = action.replace(/([A-Z])/g, ' $1').replace(/^./, (value) => value.toUpperCase());
+  const job = startJob(action, label);
+  Promise.resolve()
+    .then(() => runner())
+    .then((result) => finishJob(job, result))
+    .catch((error) => finishJob(job, { code: 1, stdout: '', stderr: error.message }));
+  return job;
+}
+
 function listBackups() {
   const { backupDir } = envPaths();
   if (!fs.existsSync(backupDir)) return [];
@@ -1331,6 +1351,11 @@ async function route(req, res) {
       }
       if (!actions[body.action]) {
         sendJson(res, 400, { ok: false, error: 'Unknown action.' });
+        return;
+      }
+      if (backgroundActions.has(body.action)) {
+        const job = runTrackedActionInBackground(body.action, () => runPowerShell(actions[body.action]));
+        sendJson(res, 202, { ok: true, accepted: true, job, health: systemHealth(), preflight: modPreflight() });
         return;
       }
       const result = await runTrackedAction(body.action, () => {

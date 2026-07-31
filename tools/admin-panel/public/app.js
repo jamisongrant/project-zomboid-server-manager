@@ -16,7 +16,8 @@ const state = {
   configChanges: {},
   wizardSeeded: false,
   settingsDirty: false,
-  modsDirty: false
+  modsDirty: false,
+  activeActions: new Set()
 };
 
 const boolKeys = new Set([
@@ -59,7 +60,7 @@ const actionLabels = {
 const actionConfirmations = {
   stop: 'Stop the Project Zomboid server now? Current players will be disconnected.',
   restart: 'Back up saves and restart the Project Zomboid server now?',
-  stagedRefresh: 'Apply staged refresh now? This warns players, stops the server, swaps staged files in, starts again, and rolls back if health fails.',
+  stagedRefresh: 'Apply the already staged refresh now? This warns players, stops the server, swaps staged files in, starts again, and rolls back if health fails.',
   rollbackStagedUpdate: 'Rollback to the previous staged server copy and restart?',
   refreshMods: 'Refresh mods now? This may restart the server.',
   update: 'Update Project Zomboid server files now? This may restart the server.',
@@ -79,7 +80,7 @@ const actionDescriptions = {
   restart: 'Creates a save backup, stops the server, then starts it again. Use after normal config changes.',
   smartRefreshMods: 'Checks the maintenance window and player activity before doing a staged mod/server refresh. Best hands-off option.',
   prepareStagedUpdate: 'Downloads server and Workshop updates into the staging folder while the active server can keep running.',
-  stagedRefresh: 'Stops the server, swaps in the staged update, starts it again, and keeps rollback files if health fails.',
+  stagedRefresh: 'Applies the already prepared staged update. Use Stage Pending Updates or Prepare Staged Update first.',
   rollbackStagedUpdate: 'Reverts to the previous staged server copy if a staged refresh broke startup or mod loading.',
   backup: 'Creates a save backup now. Use before mod changes, config edits, or updates.',
   update: 'Runs SteamCMD validation/update for the dedicated server files. May require restart before use.',
@@ -854,18 +855,72 @@ async function runAction(action) {
   const confirmation = actionConfirmations[action];
   if (confirmation && !confirm(confirmation)) return;
   const label = actionLabels[action] || action;
+  setActionBusy(action, true);
   appendOutput(`Running ${label}`);
-  const result = await api('/api/action', {
-    method: 'POST',
-    body: JSON.stringify({ action })
+  try {
+    const result = await api('/api/action', {
+      method: 'POST',
+      body: JSON.stringify({ action })
+    });
+    if (result.accepted && result.job) {
+      appendOutput(`${label} started in the background. Watch Health for live progress.`);
+      await refreshHealthOnly();
+      await pollActionJob(result.job.id, action, label);
+      return;
+    }
+    const jobLine = result.job ? `Job ${result.job.status}: ${result.job.summary}` : '';
+    appendOutput([jobLine, result.stdout, result.stderr].filter(Boolean).join('\n') || `${label} completed.`);
+    if (action === 'shutdownPanel') {
+      appendOutput('Admin panel closed. Run Open-AdminPanel.ps1 to reopen it.');
+      return;
+    }
+    await refresh();
+  } finally {
+    setActionBusy(action, false);
+  }
+}
+
+function setActionBusy(action, busy) {
+  if (busy) state.activeActions.add(action);
+  else state.activeActions.delete(action);
+  const buttons = [
+    ...all(`[data-action="${action}"]`),
+    ...(action === 'prepareStagedUpdate' ? [$('#stagePendingModsBtn')] : []),
+    ...(action === 'stagedRefresh' ? [$('#applyStagedModsBtn')] : [])
+  ].filter(Boolean);
+  buttons.forEach((button) => {
+    button.classList.toggle('busy', busy);
+    button.disabled = busy;
+    if (busy) {
+      button.dataset.originalText = button.dataset.originalText || button.textContent;
+      button.textContent = 'Working...';
+    } else if (button.dataset.originalText) {
+      button.textContent = button.dataset.originalText;
+      delete button.dataset.originalText;
+    }
   });
-  const jobLine = result.job ? `Job ${result.job.status}: ${result.job.summary}` : '';
-  appendOutput([jobLine, result.stdout, result.stderr].filter(Boolean).join('\n') || `${label} completed.`);
-  if (action === 'shutdownPanel') {
-    appendOutput('Admin panel closed. Run Open-AdminPanel.ps1 to reopen it.');
+}
+
+async function refreshHealthOnly() {
+  const result = await api('/api/health');
+  state.health = result.health || {};
+  state.preflight = result.preflight || {};
+  renderHealth();
+}
+
+async function pollActionJob(jobId, action, label) {
+  const started = Date.now();
+  while (Date.now() - started < 30 * 60 * 1000) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await refreshHealthOnly();
+    const job = (state.health.jobs || []).find((item) => item.id === jobId);
+    if (!job || job.status === 'running') continue;
+    appendOutput(`Job ${job.status}: ${job.summary || label}`);
+    setActionBusy(action, false);
+    await refresh();
     return;
   }
-  await refresh();
+  appendOutput(`${label} is still running or the panel stopped receiving updates. Refresh Health to check current state.`);
 }
 
 async function runRestore(name) {
