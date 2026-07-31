@@ -619,15 +619,17 @@ function renderModRecoveryPanel() {
   const managerCount = Number(diag.storedEntryCount || 0);
   const iniCount = Number(diag.iniWorkshopCount || 0);
   const loadOrderCount = Number(diag.iniLoadOrderCount || state.modLoadOrder.length || 0);
-  const needsRepair = Boolean(diag.needsEntryRepair || diag.needsLoadOrderRepair || (managerCount === 0 && iniCount > 0));
+  const bestWorkshopCount = Number(diag.bestRecoveryWorkshopCount || 0);
+  const bestSource = diag.bestRecoverySource || 'server.ini';
+  const needsRepair = Boolean(diag.needsEntryRepair || diag.needsLoadOrderRepair || (managerCount === 0 && (iniCount > 0 || bestWorkshopCount > 0)));
 
   panel.classList.toggle('warning', needsRepair || state.modStateSource === 'server.ini');
   repairButton.disabled = !diag.recoverableFromIni;
   repairButton.hidden = !needsRepair && managerCount > 0;
 
   if (needsRepair) {
-    title.textContent = 'Mod view can be repaired from server.ini.';
-    body.textContent = `Manager file has ${managerCount} mod row${managerCount === 1 ? '' : 's'}; active server.ini has ${iniCount} Workshop item${iniCount === 1 ? '' : 's'} and ${loadOrderCount} load-order item${loadOrderCount === 1 ? '' : 's'}. Repair rebuilds config\\mods.json without touching saves or restarting the server.`;
+    title.textContent = bestWorkshopCount > iniCount ? 'Mod view can be repaired from a config backup.' : 'Mod view can be repaired from server.ini.';
+    body.textContent = `Manager file has ${managerCount} mod row${managerCount === 1 ? '' : 's'}; active server.ini has ${iniCount} Workshop item${iniCount === 1 ? '' : 's'} and ${loadOrderCount} load-order item${loadOrderCount === 1 ? '' : 's'}. Best recovery source: ${bestSource} with ${bestWorkshopCount || iniCount} Workshop item${(bestWorkshopCount || iniCount) === 1 ? '' : 's'}. Repair rebuilds config\\mods.json without touching saves or restarting the server.`;
     return;
   }
 
@@ -638,7 +640,7 @@ function renderModRecoveryPanel() {
   }
 
   title.textContent = 'Mod state is loaded from manager config.';
-  body.textContent = `config\\mods.json has ${managerCount || state.mods.length} mod row${(managerCount || state.mods.length) === 1 ? '' : 's'}; active server.ini has ${iniCount} Workshop item${iniCount === 1 ? '' : 's'}.`;
+  body.textContent = `config\\mods.json has ${managerCount || state.mods.length} mod row${(managerCount || state.mods.length) === 1 ? '' : 's'}; active server.ini has ${iniCount} Workshop item${iniCount === 1 ? '' : 's'}. Best backup recovery source: ${bestSource || 'none'}.`;
 }
 
 function renderPendingMods(pendingMods, checkedCount) {
@@ -1151,9 +1153,9 @@ function bindUi() {
   });
 
   $('#repairModsBtn').addEventListener('click', async () => {
-    if (!confirm('Repair the manager mod view from the active server.ini? This rebuilds config\\mods.json and does not restart the server.')) return;
+    if (!confirm('Repair the manager mod view from the best available server.ini or config backup? This rebuilds config\\mods.json and does not restart the server.')) return;
     try {
-      appendOutput('Repairing mod view from server.ini.');
+      appendOutput('Repairing mod view from the best available config source.');
       const result = await api('/api/mods/repair', { method: 'POST', body: '{}' });
       state.mods = result.mods || [];
       state.modLoadOrder = result.modLoadOrder || [];
@@ -1162,7 +1164,7 @@ function bindUi() {
       state.settings = result.settings || state.settings;
       state.modsDirty = false;
       renderMods();
-      appendOutput(`Mod view repaired from server.ini: ${state.mods.length} rows.`);
+      appendOutput(`Mod view repaired from ${result.repairedFrom || 'config source'}: ${state.mods.length} rows.`);
     } catch (error) {
       appendOutput(error.message);
     }

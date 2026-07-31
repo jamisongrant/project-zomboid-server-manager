@@ -471,6 +471,52 @@ function modStateFromIni(iniValues) {
   return { entries, modLoadOrder: modIds, recoveredFromIni: true };
 }
 
+function modStateFromIniFile(filePath) {
+  if (!fs.existsSync(filePath)) return null;
+  const ini = readIni(filePath).values;
+  const state = modStateFromIni(ini);
+  return {
+    ...state,
+    sourcePath: filePath,
+    workshopCount: splitModIds(ini.WorkshopItems || '').length,
+    loadOrderCount: splitModIds(ini.Mods || '').length
+  };
+}
+
+function modRecoveryCandidates() {
+  const env = readEnv();
+  const backupDir = env.PZ_BACKUP_DIR || 'C:\\pz\\backups';
+  const candidates = [];
+  const active = modStateFromIniFile(serverIniPath());
+  if (active) candidates.push({ ...active, sourceLabel: 'active server.ini', modified: fs.existsSync(serverIniPath()) ? fs.statSync(serverIniPath()).mtime.toISOString() : '' });
+
+  if (fs.existsSync(backupDir)) {
+    for (const name of fs.readdirSync(backupDir)) {
+      if (!/(\.ini\.bak|server-config-.+\.bak|servertest\.ini-.+\.bak)$/i.test(name)) continue;
+      const fullPath = path.join(backupDir, name);
+      const recovered = modStateFromIniFile(fullPath);
+      if (!recovered) continue;
+      candidates.push({
+        ...recovered,
+        sourceLabel: `backup ${name}`,
+        modified: fs.statSync(fullPath).mtime.toISOString()
+      });
+    }
+  }
+
+  return candidates
+    .filter((candidate) => candidate.entries.length > 0 || candidate.modLoadOrder.length > 0)
+    .sort((a, b) => {
+      const workshopDelta = b.workshopCount - a.workshopCount;
+      if (workshopDelta !== 0) return workshopDelta;
+      const entryDelta = b.entries.length - a.entries.length;
+      if (entryDelta !== 0) return entryDelta;
+      const loadDelta = b.loadOrderCount - a.loadOrderCount;
+      if (loadDelta !== 0) return loadDelta;
+      return String(b.modified || '').localeCompare(String(a.modified || ''));
+    });
+}
+
 function effectiveModState() {
   const stored = readModState();
   const ini = readIni(serverIniPath()).values;
@@ -493,12 +539,18 @@ function modDiagnostics() {
   const stored = readModState();
   const ini = readIni(serverIniPath()).values;
   const iniState = modStateFromIni(ini);
+  const candidates = modRecoveryCandidates();
+  const best = candidates[0] || null;
   return {
     storedEntryCount: stored.entries.length,
     storedLoadOrderCount: stored.modLoadOrder.length,
     iniWorkshopCount: splitModIds(ini.WorkshopItems || '').length,
     iniLoadOrderCount: splitModIds(ini.Mods || '').length,
-    recoverableFromIni: iniState.entries.length > 0,
+    backupRecoveryCount: candidates.filter((candidate) => candidate.sourceLabel !== 'active server.ini').length,
+    bestRecoverySource: best ? best.sourceLabel : '',
+    bestRecoveryWorkshopCount: best ? best.workshopCount : 0,
+    bestRecoveryLoadOrderCount: best ? best.loadOrderCount : 0,
+    recoverableFromIni: iniState.entries.length > 0 || candidates.length > 0,
     needsEntryRepair: stored.entries.length === 0 && iniState.entries.length > 0,
     needsLoadOrderRepair: stored.modLoadOrder.length === 0 && iniState.modLoadOrder.length > 0,
     modsPath,
@@ -507,13 +559,16 @@ function modDiagnostics() {
 }
 
 function repairModsFromIni() {
-  const ini = readIni(serverIniPath()).values;
-  const iniState = modStateFromIni(ini);
-  if (iniState.entries.length === 0) {
-    throw new Error('No WorkshopItems or Mods were found in the active server.ini.');
+  const candidates = modRecoveryCandidates();
+  const best = candidates[0];
+  if (!best || (best.entries.length === 0 && best.modLoadOrder.length === 0)) {
+    throw new Error('No WorkshopItems or Mods were found in the active server.ini or config backups.');
   }
-  writeMods(iniState.entries, iniState.modLoadOrder);
-  return effectiveModState();
+  if (best.workshopCount === 0) {
+    throw new Error(`Only a Mods load order was found in ${best.sourceLabel}; no WorkshopItems were available to restore. Import a previous server.ini that still has WorkshopItems.`);
+  }
+  writeMods(best.entries, best.modLoadOrder);
+  return { ...effectiveModState(), repairedFrom: best.sourceLabel, repairedFromPath: best.sourcePath };
 }
 
 function writeMods(mods, modLoadOrder = []) {
@@ -534,6 +589,22 @@ function writeMods(mods, modLoadOrder = []) {
   const cleanLoadOrder = modLoadOrder.map((modId) => String(modId || '').trim()).filter(Boolean);
   fs.writeFileSync(modsPath, `${JSON.stringify({ entries: clean, modLoadOrder: cleanLoadOrder }, null, 2)}\n`, 'utf8');
   return clean;
+}
+
+function assertNoDangerousModWipe(mods, modLoadOrder = []) {
+  const currentIni = readIni(serverIniPath()).values;
+  const existingWorkshop = splitModIds(currentIni.WorkshopItems || '');
+  const nextWorkshop = mods.filter((mod) => mod.enabled && String(mod.workshopId || '').trim()).map((mod) => String(mod.workshopId).trim());
+  const nextLoadOrder = modLoadOrder.length > 0
+    ? modLoadOrder
+    : mods.filter((mod) => mod.enabled).flatMap((mod) => splitModIds(mod.modId));
+
+  if (existingWorkshop.length > 0 && nextWorkshop.length === 0) {
+    throw new Error(`Refusing to save an empty WorkshopItems list over ${existingWorkshop.length} active Workshop item(s). Repair mods first or remove mods intentionally from the config editor.`);
+  }
+  if (splitModIds(currentIni.Mods || '').length > 0 && nextLoadOrder.length === 0) {
+    throw new Error('Refusing to save an empty Mods load order over the active server.ini load order. Repair mods first or remove mods intentionally from the config editor.');
+  }
 }
 
 function splitModIds(value) {
@@ -1401,6 +1472,7 @@ async function route(req, res) {
 
     if (req.method === 'POST' && url.pathname === '/api/mods') {
       const body = await readJsonBody(req);
+      assertNoDangerousModWipe(body.mods || [], body.modLoadOrder || []);
       const mods = writeMods(body.mods || [], body.modLoadOrder || []);
       const modState = readModState();
       syncModsToIni(mods, modState.modLoadOrder);
@@ -1417,6 +1489,8 @@ async function route(req, res) {
         modLoadOrder: modState.modLoadOrder,
         modStateSource: modState.recoveredFromIni ? 'server.ini' : 'mods.json',
         modDiagnostics: modDiagnostics(),
+        repairedFrom: modState.repairedFrom || '',
+        repairedFromPath: modState.repairedFromPath || '',
         settings: readIni(serverIniPath()).values
       });
       return;

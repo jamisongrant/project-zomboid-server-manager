@@ -270,8 +270,23 @@ Add-Check 'Admin settings persist across apply config' {
     if ($serverJs -notmatch 'effectiveModState' -or $serverJs -notmatch 'modStateFromIni' -or $serverJs -notmatch 'modStateSource') {
         throw 'Admin backend must recover mod state from server.ini when mods.json is missing.'
     }
+    foreach ($required in @('modRecoveryCandidates', 'bestRecoverySource', 'backupRecoveryCount', 'repairedFrom', 'No WorkshopItems or Mods were found in the active server.ini or config backups')) {
+        if ($serverJs -notmatch [regex]::Escape($required)) {
+            throw "Admin backend must support backup-based mod recovery: $required"
+        }
+    }
+    foreach ($required in @('assertNoDangerousModWipe', 'Refusing to save an empty WorkshopItems list', 'Refusing to save an empty Mods load order')) {
+        if ($serverJs -notmatch [regex]::Escape($required)) {
+            throw "Admin backend must guard against accidental mod wipes: $required"
+        }
+    }
     if ($appJs -notmatch 'Recovered from server.ini') {
         throw 'Admin frontend must explain recovered mod state.'
+    }
+    foreach ($required in @('config backup', 'Best recovery source', 'bestRecoveryWorkshopCount', 'bestRecoverySource')) {
+        if ($appJs -notmatch [regex]::Escape($required)) {
+            throw "Admin frontend must explain backup-based mod recovery: $required"
+        }
     }
 }
 
