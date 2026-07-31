@@ -17,11 +17,10 @@ $rules = @(
 foreach ($rule in $rules) {
     $existing = Get-NetFirewallRule -DisplayName $rule.Name -ErrorAction SilentlyContinue
     if ($existing) {
-        Set-NetFirewallRule -DisplayName $rule.Name -Enabled True -Direction Inbound -Action Allow | Out-Null
-        Set-NetFirewallPortFilter -AssociatedNetFirewallRule $existing -Protocol $rule.Protocol -LocalPort $rule.Port | Out-Null
-    } else {
-        New-NetFirewallRule -DisplayName $rule.Name -Direction Inbound -Action Allow -Protocol $rule.Protocol -LocalPort $rule.Port | Out-Null
+        # Recreate our own named rule instead of relying on the optional port-filter association parameter.
+        Remove-NetFirewallRule -DisplayName $rule.Name -ErrorAction SilentlyContinue
     }
+    New-NetFirewallRule -DisplayName $rule.Name -Enabled True -Direction Inbound -Action Allow -Protocol $rule.Protocol -LocalPort $rule.Port | Out-Null
 }
 
 Write-PzLog -Config $config -Message "Installed firewall rules for UDP $($config.Port) and $($config.UdpPort)." -Name 'ops'
