@@ -12,6 +12,10 @@ $config = Get-PzConfig
 Initialize-PzDirectories -Config $config
 $pwsh = (Get-Command powershell.exe).Source
 
+# Remove legacy PZ task definitions first so upgrades can replace Daily Restart
+# and Smart Mod Refresh tasks with the required-mods restart task.
+& (Join-Path $PSScriptRoot 'Unregister-PzScheduledTasks.ps1') -TaskPrefix $TaskPrefix
+
 function New-PzTaskAction {
     param([string]$ScriptPath)
     $args = "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`""
