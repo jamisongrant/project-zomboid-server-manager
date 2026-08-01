@@ -25,9 +25,15 @@ if (Test-Path -LiteralPath $pidPath) {
     if ($pidText -match '^\d+$') {
         $process = Get-Process -Id ([int]$pidText) -ErrorAction SilentlyContinue
         if ($null -ne $process) {
-            Start-Process "http://127.0.0.1:$Port"
-            Write-Host "Admin panel already running at http://127.0.0.1:$Port"
-            exit 0
+            if ($Relaunched) {
+                Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+                Remove-Item -LiteralPath $pidPath -Force -ErrorAction SilentlyContinue
+                Start-Sleep -Milliseconds 250
+            } else {
+                Start-Process "http://127.0.0.1:$Port"
+                Write-Host "Admin panel already running at http://127.0.0.1:$Port"
+                exit 0
+            }
         }
     }
 }
