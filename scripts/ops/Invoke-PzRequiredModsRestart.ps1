@@ -60,7 +60,7 @@ if (Test-Path -LiteralPath $statePath) {
 
 $before = ''
 $metadataFingerprint = ''
-Enter-PzMaintenance -Config $config -Reason 'required-mods-check'
+Enter-PzMaintenance -Config $config -Reason 'mod-update-check'
 try {
     $before = Get-WorkshopFingerprint
     try {
@@ -75,12 +75,12 @@ try {
         [string]$previous.metadataFingerprint -eq $metadataFingerprint -and
         [string]$previous.fingerprint -eq $before -and
         -not [bool]$previous.pending) {
-        Write-RequiredState @{ phase = 'unchanged'; status = 'No required Workshop mod update detected; skipped SteamCMD staging.'; checkedAt = (Get-Date).ToString('o'); fingerprint = $before; metadataFingerprint = $metadataFingerprint; lastAppliedAt = $previous.lastAppliedAt; pending = $false; restartIntervalMinutes = $config.ModRestartIntervalMinutes }
+        Write-RequiredState @{ phase = 'unchanged'; status = 'No Workshop update detected; skipped SteamCMD staging.'; checkedAt = (Get-Date).ToString('o'); fingerprint = $before; metadataFingerprint = $metadataFingerprint; lastAppliedAt = $previous.lastAppliedAt; pending = $false; restartIntervalMinutes = $config.ModRestartIntervalMinutes }
         exit 0
     }
 
-    Write-PzLog -Config $config -Message 'Required-mods check started.' -Name 'automation'
-    Write-RequiredState @{ phase = 'preparing'; status = 'Checking Workshop content for required updates.'; checkedAt = (Get-Date).ToString('o'); fingerprintBefore = $before; restartIntervalMinutes = $config.ModRestartIntervalMinutes }
+    Write-PzLog -Config $config -Message 'Mod update automation check started.' -Name 'automation'
+    Write-RequiredState @{ phase = 'preparing'; status = 'Checking configured Workshop items for updates.'; checkedAt = (Get-Date).ToString('o'); fingerprintBefore = $before; restartIntervalMinutes = $config.ModRestartIntervalMinutes }
     & (Join-Path $PSScriptRoot 'Prepare-PzStagedUpdate.ps1')
     $after = Get-WorkshopFingerprint
 
@@ -89,14 +89,14 @@ try {
     }
 
     if ($null -eq $previous -or [string]::IsNullOrWhiteSpace([string]$previous.fingerprint)) {
-        Write-RequiredState @{ phase = 'baseline'; status = 'Required-mods baseline recorded; no restart needed.'; checkedAt = (Get-Date).ToString('o'); fingerprint = $after; metadataFingerprint = $metadataFingerprint; lastAppliedAt = $null; pending = $false; restartIntervalMinutes = $config.ModRestartIntervalMinutes }
+        Write-RequiredState @{ phase = 'baseline'; status = 'Workshop baseline recorded; no restart needed.'; checkedAt = (Get-Date).ToString('o'); fingerprint = $after; metadataFingerprint = $metadataFingerprint; lastAppliedAt = $null; pending = $false; restartIntervalMinutes = $config.ModRestartIntervalMinutes }
         Remove-Item -LiteralPath (Join-Path $config.StagingDir 'server-next') -Recurse -Force -ErrorAction SilentlyContinue
         Remove-Item -LiteralPath (Join-Path $config.StagingDir 'staged-update.json') -Force -ErrorAction SilentlyContinue
         exit 0
     }
 
     if ([string]$previous.fingerprint -eq $after) {
-        Write-RequiredState @{ phase = 'unchanged'; status = 'No required Workshop mod update detected.'; checkedAt = (Get-Date).ToString('o'); fingerprint = $after; metadataFingerprint = $metadataFingerprint; lastAppliedAt = $previous.lastAppliedAt; pending = [bool]$previous.pending; restartIntervalMinutes = $config.ModRestartIntervalMinutes }
+        Write-RequiredState @{ phase = 'unchanged'; status = 'No Workshop update detected.'; checkedAt = (Get-Date).ToString('o'); fingerprint = $after; metadataFingerprint = $metadataFingerprint; lastAppliedAt = $previous.lastAppliedAt; pending = [bool]$previous.pending; restartIntervalMinutes = $config.ModRestartIntervalMinutes }
         Remove-Item -LiteralPath (Join-Path $config.StagingDir 'server-next') -Recurse -Force -ErrorAction SilentlyContinue
         Remove-Item -LiteralPath (Join-Path $config.StagingDir 'staged-update.json') -Force -ErrorAction SilentlyContinue
         exit 0
@@ -106,17 +106,17 @@ try {
     if ($previous.lastAppliedAt) { [datetime]::TryParse([string]$previous.lastAppliedAt, [ref]$lastApplied) | Out-Null }
     $eligible = ((Get-Date) - $lastApplied).TotalMinutes -ge $config.ModRestartIntervalMinutes
     if (-not $eligible) {
-        Write-RequiredState @{ phase = 'pending'; status = "Required mod updates staged; waiting for the $($config.ModRestartIntervalMinutes)-minute restart interval."; checkedAt = (Get-Date).ToString('o'); fingerprint = [string]$previous.fingerprint; metadataFingerprint = $metadataFingerprint; stagedFingerprint = $after; lastAppliedAt = $previous.lastAppliedAt; pending = $true; restartIntervalMinutes = $config.ModRestartIntervalMinutes }
+        Write-RequiredState @{ phase = 'pending'; status = "Workshop updates staged; waiting for the $($config.ModRestartIntervalMinutes)-minute apply interval."; checkedAt = (Get-Date).ToString('o'); fingerprint = [string]$previous.fingerprint; metadataFingerprint = $metadataFingerprint; stagedFingerprint = $after; lastAppliedAt = $previous.lastAppliedAt; pending = $true; restartIntervalMinutes = $config.ModRestartIntervalMinutes }
         exit 0
     }
 
-    Write-RequiredState @{ phase = 'restarting'; status = "Required mod updates found. Restarting with a $($config.ModWarningSeconds)-second player warning."; checkedAt = (Get-Date).ToString('o'); fingerprint = [string]$previous.fingerprint; metadataFingerprint = $metadataFingerprint; stagedFingerprint = $after; lastAppliedAt = $previous.lastAppliedAt; pending = $true; restartIntervalMinutes = $config.ModRestartIntervalMinutes }
+    Write-RequiredState @{ phase = 'restarting'; status = "Workshop updates found. Applying with a $($config.ModWarningSeconds)-second player warning."; checkedAt = (Get-Date).ToString('o'); fingerprint = [string]$previous.fingerprint; metadataFingerprint = $metadataFingerprint; stagedFingerprint = $after; lastAppliedAt = $previous.lastAppliedAt; pending = $true; restartIntervalMinutes = $config.ModRestartIntervalMinutes }
     & (Join-Path $PSScriptRoot 'Invoke-PzStagedRefresh.ps1') -SkipPrepare
     $appliedAt = (Get-Date).ToString('o')
-    Write-RequiredState @{ phase = 'ready'; status = 'Required mod restart completed and server recovery was verified.'; checkedAt = $appliedAt; fingerprint = $after; metadataFingerprint = $metadataFingerprint; lastAppliedAt = $appliedAt; pending = $false; restartIntervalMinutes = $config.ModRestartIntervalMinutes }
+    Write-RequiredState @{ phase = 'ready'; status = 'Workshop update applied and server recovery was verified.'; checkedAt = $appliedAt; fingerprint = $after; metadataFingerprint = $metadataFingerprint; lastAppliedAt = $appliedAt; pending = $false; restartIntervalMinutes = $config.ModRestartIntervalMinutes }
 } catch {
-    Write-PzLog -Config $config -Message "Required-mods restart failed: $($_.Exception.Message)" -Name 'automation' -Level 'ERROR'
-    Write-RequiredState @{ phase = 'failed'; status = 'Required mod restart failed. Review Health before retrying.'; checkedAt = (Get-Date).ToString('o'); fingerprint = if ($previous) { [string]$previous.fingerprint } else { $before }; metadataFingerprint = $metadataFingerprint; pending = $true; lastError = $_.Exception.Message; restartIntervalMinutes = $config.ModRestartIntervalMinutes }
+    Write-PzLog -Config $config -Message "Mod update automation failed: $($_.Exception.Message)" -Name 'automation' -Level 'ERROR'
+    Write-RequiredState @{ phase = 'failed'; status = 'Workshop update automation failed. Review Health before retrying.'; checkedAt = (Get-Date).ToString('o'); fingerprint = if ($previous) { [string]$previous.fingerprint } else { $before }; metadataFingerprint = $metadataFingerprint; pending = $true; lastError = $_.Exception.Message; restartIntervalMinutes = $config.ModRestartIntervalMinutes }
     throw
 } finally {
     Exit-PzMaintenance -Config $config

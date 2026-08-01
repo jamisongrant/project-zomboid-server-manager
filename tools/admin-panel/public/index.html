@@ -56,7 +56,7 @@
         <button class="primary" data-action="start" title="Start the Project Zomboid server using the current config.">Start</button>
         <button data-action="stop" title="Save and stop the Project Zomboid server.">Stop</button>
         <button data-action="restart" title="Back up saves, stop the server, then start it again.">Restart + Backup</button>
-        <button data-action="smartRefreshMods" title="Check required Workshop mods now, stage any changes, and restart on the configured cadence.">Check Required Mods</button>
+        <button data-action="smartRefreshMods" title="Check all configured Workshop items now, stage any changes, and apply them on the configured cadence.">Check Mod Updates</button>
       </div>
       <button class="help-link" type="button" data-help-actions="start,stop,restart,smartRefreshMods">Action Help</button>
     </section>
@@ -101,7 +101,7 @@
         <label>Map<input name="Map"></label>
         <label>Backup count<input name="BackupsCount" type="number" min="0"></label>
         <label>Refresh warning seconds<input id="modWarningSeconds" type="number" min="0"></label>
-        <label>Required-mods check interval
+        <label>Mod update check interval
           <select id="modCheckMinutes"><option value="5">Every 5 minutes</option><option value="10">Every 10 minutes</option><option value="15">Every 15 minutes</option><option value="30">Every 30 minutes</option><option value="60">Every 60 minutes</option></select>
         </label>
         <label>Minimum restart interval (minutes)
@@ -158,7 +158,7 @@
         <button id="saveModsBtn">Save Mods</button>
         <button id="checkModsBtn">Check Updates</button>
         <button data-action="refreshMods" title="Warn players, back up saves, update enabled Workshop mods, restart the server, and verify recovery.">Update Mods + Restart</button>
-        <button data-action="smartRefreshMods" title="Check required Workshop mods now and apply the configured restart cadence.">Check Required Mods</button>
+        <button data-action="smartRefreshMods" title="Check all configured Workshop items now and apply the configured cadence.">Check Mod Updates</button>
       </div>
       <button class="help-link" type="button" data-help-actions="refreshMods,smartRefreshMods,prepareStagedUpdate,stagedRefresh">Action Help</button>
       <div class="mod-summary">
@@ -204,12 +204,12 @@
       </div>
       <section class="automation-hero" id="automationDailyPanel">
         <div>
-          <span>Required mods automation</span>
+          <span>Mod update automation</span>
           <strong id="automationDailyState">Checking</strong>
           <p id="automationDailyWhy">Checking scheduled tasks and safety state.</p>
         </div>
         <div class="automation-schedule">
-          <span>Next required-mods check</span>
+          <span>Next mod update check</span>
           <strong id="automationNextRun">-</strong>
           <code id="automationWindow">-</code>
         </div>

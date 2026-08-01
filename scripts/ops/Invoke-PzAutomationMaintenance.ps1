@@ -105,7 +105,7 @@ try {
     }
 
     $checks = @()
-    $checks += New-AutomationCheck -Id 'requiredModsTask' -Label 'Required-mods task' -Ok $true -Message "Required-mods automation checks every $($config.ModCheckMinutes) minutes and applies at most every $($config.ModRestartIntervalMinutes) minutes." -Severity 'ok'
+    $checks += New-AutomationCheck -Id 'modUpdateTask' -Label 'Mod update automation' -Ok $true -Message "Checks configured Workshop items every $($config.ModCheckMinutes) minutes, stages detected changes automatically, and applies them at most every $($config.ModRestartIntervalMinutes) minutes." -Severity 'ok'
     $checks += New-AutomationCheck -Id 'serverIni' -Label 'Server INI' -Ok (Test-Path -LiteralPath $serverIni) -Message $serverIni -Severity $(if (Test-Path -LiteralPath $serverIni) { 'ok' } else { 'danger' })
     $checks += New-AutomationCheck -Id 'workshopItems' -Label 'WorkshopItems' -Ok ($workshopItems.Count -gt 0) -Message "$($workshopItems.Count) Workshop item(s) found in active server.ini." -Severity $(if ($workshopItems.Count -gt 0) { 'ok' } else { 'danger' })
     $checks += New-AutomationCheck -Id 'mods' -Label 'Mods load order' -Ok ($realModIds.Count -gt 0) -Message "$($realModIds.Count) non-numeric mod load ID(s) found in active server.ini." -Severity $(if ($realModIds.Count -gt 0) { 'ok' } else { 'danger' })

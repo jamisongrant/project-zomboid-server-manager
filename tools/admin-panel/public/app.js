@@ -81,7 +81,7 @@ const actionDescriptions = {
   start: 'Starts the Project Zomboid server with the current saved config. Wait for Ready before players join.',
   stop: 'Saves and stops the Project Zomboid server. Everyone connected will be disconnected.',
   restart: 'Creates a save backup, stops the server, then starts it again. Use after normal config changes.',
-  smartRefreshMods: 'Checks required Workshop mods, stages changes while the server stays live, then applies the configured restart cadence with a player warning and recovery verification.',
+  smartRefreshMods: 'Checks all configured Workshop items, stages changes while the server stays live, then applies them on the configured cadence with a player warning and recovery verification.',
   prepareStagedUpdate: 'Downloads server and Workshop updates into the staging folder while the active server can keep running.',
   stagedRefresh: 'Applies the already prepared staged update. Use Stage Pending Updates or Prepare Staged Update first.',
   rollbackStagedUpdate: 'Reverts to the previous staged server copy if a staged refresh broke startup or mod loading.',
@@ -271,7 +271,10 @@ function nextWindowStart(startValue) {
 
 function smartAutomationTask() {
   const tasks = state.health?.automationTasks?.tasks || [];
-  return tasks.find((task) => String(task.name || '').toLowerCase().includes('required mods restart'));
+  return tasks.find((task) => {
+    const name = String(task.name || '').toLowerCase();
+    return name.includes('mod update automation') || name.includes('required mods restart');
+  });
 }
 
 function renderAutomationDailyPanel() {
@@ -291,7 +294,7 @@ function renderAutomationDailyPanel() {
 
   const issues = [];
   if (!smartTask || !smartTask.enabled || smartTask.state === 'Disabled') {
-    issues.push('Enable Automation to check for required mod updates automatically.');
+    issues.push('Enable Automation to detect Workshop updates automatically.');
   }
   if (!preflight.ok) {
     issues.push('Mod preflight needs review before automation should touch Workshop files.');
@@ -309,10 +312,10 @@ function renderAutomationDailyPanel() {
   const enabled = Boolean(smartTask && smartTask.enabled && smartTask.state !== 'Disabled');
   const tone = !enabled ? 'info' : issues.length ? 'warning' : 'ok';
   panel.className = `automation-hero ${tone === 'ok' ? '' : tone}`.trim();
-  $('#automationDailyState').textContent = !enabled ? 'Not enabled' : issues.length ? 'Needs attention' : 'Monitoring required mods';
+  $('#automationDailyState').textContent = !enabled ? 'Not enabled' : issues.length ? 'Needs attention' : 'Monitoring Workshop updates';
   $('#automationDailyWhy').textContent = issues.length
     ? issues[0]
-    : `Checks every ${checkMinutes} minutes and restarts at most every ${restartMinutes} minutes when required mods change.`;
+    : `Checks every ${checkMinutes} minutes, stages detected changes, and applies them at most every ${restartMinutes} minutes.`;
   $('#automationNextRun').textContent = enabled ? formatDate(nextTaskRun) : 'Not scheduled';
   $('#automationWindow').textContent = `Check ${checkMinutes}m · Restart ${restartMinutes}m`;
 }

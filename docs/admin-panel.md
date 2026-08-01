@@ -58,9 +58,9 @@ Project Zomboid generally requires the server to restart before updated Workshop
 
 Set `PZ_MOD_WARNING_SECONDS` in `config\server.env` to control the warning window.
 
-Set `PZ_MOD_CHECK_MINUTES` to `5`, `10`, `15`, `30`, or `60` for the required-mods check cadence. Set `PZ_MOD_RESTART_INTERVAL_MINUTES` to `15`, `30`, or `60` to cap how often an automatic restart can occur.
+Set `PZ_MOD_CHECK_MINUTES` to `5`, `10`, `15`, `30`, or `60` for the Workshop update check cadence. Set `PZ_MOD_RESTART_INTERVAL_MINUTES` to `15`, `30`, or `60` to cap how often an automatic restart can occur.
 
-Set `PZ_AUTO_REFRESH_MODS=true` only after the required-mods restart flow has been tested with your mod pack. Automation stages updates while the server is live, warns players for `PZ_MOD_WARNING_SECONDS`, swaps the staged server, then verifies startup and rolls back if recovery fails.
+Set `PZ_AUTO_REFRESH_MODS=true` only after the automatic Workshop update flow has been tested with your mod pack. Automation stages updates while the server is live, warns players for `PZ_MOD_WARNING_SECONDS`, swaps the staged server, then verifies startup and rolls back if recovery fails.
 
 Players may still need Steam Workshop to update their local client files before joining after a mod update. The manager can shorten and protect the server-side maintenance window, but it cannot force client Workshop updates.
 

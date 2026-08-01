@@ -13,7 +13,7 @@ Initialize-PzDirectories -Config $config
 $pwsh = (Get-Command powershell.exe).Source
 
 # Remove legacy PZ task definitions first so upgrades can replace Daily Restart
-# and Smart Mod Refresh tasks with the required-mods restart task.
+# and Smart Mod Refresh tasks with the automatic mod update task.
 & (Join-Path $PSScriptRoot 'Unregister-PzScheduledTasks.ps1') -TaskPrefix $TaskPrefix
 
 function New-PzTaskAction {
@@ -24,7 +24,7 @@ function New-PzTaskAction {
 
 $startScript = Join-Path $config.ProjectRoot 'scripts\ops\Start-PzServer.ps1'
 $watchdogScript = Join-Path $config.ProjectRoot 'scripts\ops\Watchdog-PzServer.ps1'
-$requiredModsScript = Join-Path $config.ProjectRoot 'scripts\ops\Invoke-PzRequiredModsRestart.ps1'
+$modUpdateScript = Join-Path $config.ProjectRoot 'scripts\ops\Invoke-PzRequiredModsRestart.ps1'
 $adminPanelScript = Join-Path $config.ProjectRoot 'tools\admin-panel\Start-AdminPanel.ps1'
 
 $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Highest
@@ -38,6 +38,6 @@ $interval = if ($ModCheckMinutes -gt 0) { $ModCheckMinutes } else { $config.ModC
 if ($interval -notin @(5, 10, 15, 30, 60)) {
     throw 'Mod check interval must be 5, 10, 15, 30, or 60 minutes.'
 }
-Register-ScheduledTask -TaskName "$TaskPrefix Required Mods Restart" -Action (New-PzTaskAction $requiredModsScript) -Trigger (New-ScheduledTaskTrigger -Once -At $firstRun -RepetitionInterval (New-TimeSpan -Minutes $interval) -RepetitionDuration (New-TimeSpan -Days 3650)) -Principal $principal -Settings $settings -Force | Out-Null
+Register-ScheduledTask -TaskName "$TaskPrefix Mod Update Automation" -Action (New-PzTaskAction $modUpdateScript) -Trigger (New-ScheduledTaskTrigger -Once -At $firstRun -RepetitionInterval (New-TimeSpan -Minutes $interval) -RepetitionDuration (New-TimeSpan -Days 3650)) -Principal $principal -Settings $settings -Force | Out-Null
 
-Write-PzLog -Config $config -Message "Registered required-mods restart task with ${interval}-minute checks; first check scheduled for $firstRun and missed runs will start when available." -Name 'tasks'
+Write-PzLog -Config $config -Message "Registered mod update automation with ${interval}-minute checks; detected Workshop changes stage automatically and apply at most every $($config.ModRestartIntervalMinutes) minutes. First check scheduled for $firstRun; missed runs will start when available." -Name 'tasks'
