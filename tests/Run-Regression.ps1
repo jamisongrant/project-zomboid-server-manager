@@ -254,6 +254,20 @@ Add-Check 'Mod and staged workflows publish progress state' {
             throw "Required-mods automation must include $required."
         }
     }
+    foreach ($required in @('StartWhenAvailable', 'WakeToRun', 'firstRun', 'working directory', 'missed runs')) {
+        if ($required -eq 'working directory') { $required = 'WorkingDirectory' }
+        if ($required -eq 'missed runs') { $required = 'start when available' }
+        $tasksFile = Get-Content -LiteralPath (Join-Path $projectRoot 'scripts/tasks/Register-PzScheduledTasks.ps1') -Raw
+        if ($tasksFile -notmatch [regex]::Escape($required)) {
+            throw "Scheduled task registration must include $required."
+        }
+    }
+    $watchdog = Get-Content -LiteralPath (Join-Path $projectRoot 'scripts/ops/Watchdog-PzServer.ps1') -Raw
+    foreach ($required in @('Test-PzGameReady', 'StartupTimeoutSeconds', 'game ports are not ready', 'watchdog-recovery')) {
+        if ($watchdog -notmatch [regex]::Escape($required)) {
+            throw "Watchdog must include $required."
+        }
+    }
     foreach ($required in @('DeferCompression', 'CompressSnapshotPath', 'CompressDestinationPath', 'pending-pz-saves')) {
         if ($saveBackup -notmatch [regex]::Escape($required)) {
             throw "Save backup workflow must include $required."
