@@ -45,6 +45,24 @@ function Write-StagedRefreshProgress {
     }
 }
 
+function Start-StagedServerWithRetry {
+    param([int]$Attempts = 2)
+    for ($attempt = 1; $attempt -le $Attempts; $attempt += 1) {
+        try {
+            & (Join-Path $PSScriptRoot 'Start-PzServer.ps1')
+            Start-Sleep -Seconds 15
+            if ($null -eq (Get-PzServerProcess -Config $config)) {
+                throw 'Server process was not present after startup verification.'
+            }
+            return
+        } catch {
+            if ($attempt -ge $Attempts) { throw }
+            Write-PzLog -Config $config -Message "Server start attempt ${attempt} failed; retrying once. $($_.Exception.Message)" -Name 'staged-update' -Level 'WARN'
+            Start-Sleep -Seconds 5
+        }
+    }
+}
+
 Enter-PzMaintenance -Config $config -Reason 'staged-refresh'
 try {
     Write-StagedRefreshProgress -Phase 'running' -Status 'Starting staged refresh workflow.'
@@ -86,8 +104,7 @@ try {
     try {
         if ($wasRunning) {
             Write-StagedRefreshProgress -Phase 'starting-server' -Status 'Starting server after staged swap.'
-            & (Join-Path $PSScriptRoot 'Start-PzServer.ps1')
-            Start-Sleep -Seconds 15
+            Start-StagedServerWithRetry
             Write-StagedRefreshProgress -Phase 'health-check' -Status 'Running watchdog health check after staged swap.'
             & (Join-Path $PSScriptRoot 'Watchdog-PzServer.ps1')
         }

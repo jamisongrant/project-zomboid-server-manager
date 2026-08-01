@@ -72,8 +72,8 @@ PZ_LOG_RETENTION_DAYS=14
 PZ_WATCHDOG_MIN_RESTART_SECONDS=300
 PZ_MOD_WARNING_SECONDS=60
 PZ_AUTO_REFRESH_MODS=false
-PZ_MOD_REFRESH_WINDOW_START=04:00
-PZ_MOD_REFRESH_WINDOW_END=05:00
+PZ_MOD_CHECK_MINUTES=10
+PZ_MOD_RESTART_INTERVAL_MINUTES=60
 "@
 
 Set-Content -LiteralPath $configPath -Value $content -Encoding ASCII
@@ -99,7 +99,7 @@ if ($InstallFirewallRules) {
 }
 
 if ($RegisterAutomation) {
-    & (Join-Path $PSScriptRoot '..\tasks\Register-PzScheduledTasks.ps1') -IncludeSmartModRefresh
+    & (Join-Path $PSScriptRoot '..\tasks\Register-PzScheduledTasks.ps1')
 }
 
 if ($StartServer) {

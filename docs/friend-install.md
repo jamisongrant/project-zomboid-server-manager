@@ -54,7 +54,7 @@ Run PowerShell as Administrator:
 ```powershell
 cd C:\src\project-zomboid-server
 .\scripts\ops\Install-PzFirewallRules.ps1
-.\scripts\tasks\Register-PzScheduledTasks.ps1 -IncludeSmartModRefresh
+.\scripts\tasks\Register-PzScheduledTasks.ps1
 ```
 
 ## Turn Off Automation

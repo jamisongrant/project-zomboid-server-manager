@@ -85,7 +85,7 @@ Health > Enable Automation
 If Windows asks for Administrator permission, open PowerShell as Administrator and run:
 
 ```powershell
-.\scripts\tasks\Register-PzScheduledTasks.ps1 -IncludeSmartModRefresh
+.\scripts\tasks\Register-PzScheduledTasks.ps1
 ```
 
 ## Internet Hosting

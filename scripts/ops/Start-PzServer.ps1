@@ -48,3 +48,10 @@ Write-PzLog -Config $config -Message "Starting Project Zomboid server with profi
 $process = Start-Process -FilePath $javaExe -ArgumentList $arguments -WorkingDirectory $config.ServerDir -RedirectStandardOutput $logPath -RedirectStandardError $errorLogPath -PassThru -WindowStyle Hidden
 Set-Content -LiteralPath (Get-PzPidPath -Config $config) -Value $process.Id
 Write-PzLog -Config $config -Message "Started server PID $($process.Id). Server output: ${logPath}; errors: ${errorLogPath}" -Name 'ops'
+Start-Sleep -Seconds 5
+$process.Refresh()
+if ($process.HasExited) {
+    Remove-Item -LiteralPath (Get-PzPidPath -Config $config) -Force -ErrorAction SilentlyContinue
+    throw "Project Zomboid server exited during startup with code $($process.ExitCode). Review ${logPath} and ${errorLogPath}."
+}
+Write-PzLog -Config $config -Message "Server startup process verified as running (PID $($process.Id))." -Name 'ops'

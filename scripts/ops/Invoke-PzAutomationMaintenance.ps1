@@ -98,7 +98,6 @@ try {
     $realModIds = @($modLoadOrder | Where-Object { $_ -notmatch '^\d+$' })
     $players = Get-PzPlayerCount -Config $config
     $backupCount = @(Get-ChildItem -LiteralPath $config.BackupDir -Filter 'pz-saves-*.zip' -ErrorAction SilentlyContinue).Count
-    $inWindow = $IgnoreWindow -or (Test-PzTimeWindow -Start $config.ModRefreshWindowStart -End $config.ModRefreshWindowEnd)
     $stagedProgressPath = Join-Path $config.StateDir 'staged-update-progress.json'
     $stagedProgress = $null
     if (Test-Path -LiteralPath $stagedProgressPath) {
@@ -106,7 +105,7 @@ try {
     }
 
     $checks = @()
-    $checks += New-AutomationCheck -Id 'maintenanceWindow' -Label 'Maintenance window' -Ok $inWindow -Message $(if ($inWindow) { 'Automation is inside the configured refresh window, or the window check was bypassed.' } else { "Outside the configured refresh window $($config.ModRefreshWindowStart)-$($config.ModRefreshWindowEnd)." }) -Severity $(if ($inWindow) { 'ok' } else { 'warning' })
+    $checks += New-AutomationCheck -Id 'requiredModsTask' -Label 'Required-mods task' -Ok $true -Message "Required-mods automation checks every $($config.ModCheckMinutes) minutes and applies at most every $($config.ModRestartIntervalMinutes) minutes." -Severity 'ok'
     $checks += New-AutomationCheck -Id 'serverIni' -Label 'Server INI' -Ok (Test-Path -LiteralPath $serverIni) -Message $serverIni -Severity $(if (Test-Path -LiteralPath $serverIni) { 'ok' } else { 'danger' })
     $checks += New-AutomationCheck -Id 'workshopItems' -Label 'WorkshopItems' -Ok ($workshopItems.Count -gt 0) -Message "$($workshopItems.Count) Workshop item(s) found in active server.ini." -Severity $(if ($workshopItems.Count -gt 0) { 'ok' } else { 'danger' })
     $checks += New-AutomationCheck -Id 'mods' -Label 'Mods load order' -Ok ($realModIds.Count -gt 0) -Message "$($realModIds.Count) non-numeric mod load ID(s) found in active server.ini." -Severity $(if ($realModIds.Count -gt 0) { 'ok' } else { 'danger' })

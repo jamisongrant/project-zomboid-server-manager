@@ -73,8 +73,8 @@ function Get-PzConfig {
         WatchdogMinRestartSeconds = [int](ValueOrDefault $envValues 'PZ_WATCHDOG_MIN_RESTART_SECONDS' '300')
         ModWarningSeconds = [int](ValueOrDefault $envValues 'PZ_MOD_WARNING_SECONDS' '60')
         AutoRefreshMods = [bool]::Parse((ValueOrDefault $envValues 'PZ_AUTO_REFRESH_MODS' 'false'))
-        ModRefreshWindowStart = ValueOrDefault $envValues 'PZ_MOD_REFRESH_WINDOW_START' '04:00'
-        ModRefreshWindowEnd = ValueOrDefault $envValues 'PZ_MOD_REFRESH_WINDOW_END' '05:00'
+        ModCheckMinutes = [int](ValueOrDefault $envValues 'PZ_MOD_CHECK_MINUTES' '10')
+        ModRestartIntervalMinutes = [int](ValueOrDefault $envValues 'PZ_MOD_RESTART_INTERVAL_MINUTES' '60')
     }
 
     return [pscustomobject]$config

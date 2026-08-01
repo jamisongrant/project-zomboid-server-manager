@@ -81,7 +81,7 @@ const actionDescriptions = {
   start: 'Starts the Project Zomboid server with the current saved config. Wait for Ready before players join.',
   stop: 'Saves and stops the Project Zomboid server. Everyone connected will be disconnected.',
   restart: 'Creates a save backup, stops the server, then starts it again. Use after normal config changes.',
-  smartRefreshMods: 'Runs the guarded automation maintenance flow: checks mod config, player activity, backups, and the maintenance window before doing a staged refresh.',
+  smartRefreshMods: 'Checks required Workshop mods, stages changes while the server stays live, then applies the configured restart cadence with a player warning and recovery verification.',
   prepareStagedUpdate: 'Downloads server and Workshop updates into the staging folder while the active server can keep running.',
   stagedRefresh: 'Applies the already prepared staged update. Use Stage Pending Updates or Prepare Staged Update first.',
   rollbackStagedUpdate: 'Reverts to the previous staged server copy if a staged refresh broke startup or mod loading.',
@@ -261,7 +261,7 @@ function formatDate(value) {
 }
 
 function nextWindowStart(startValue) {
-  const value = startValue || '04:00';
+  const value = startValue || '10';
   const [hours, minutes] = value.split(':').map((part) => Number(part));
   const next = new Date();
   next.setHours(Number.isFinite(hours) ? hours : 4, Number.isFinite(minutes) ? minutes : 0, 0, 0);
@@ -271,7 +271,7 @@ function nextWindowStart(startValue) {
 
 function smartAutomationTask() {
   const tasks = state.health?.automationTasks?.tasks || [];
-  return tasks.find((task) => String(task.name || '').toLowerCase().includes('smart mod refresh'));
+  return tasks.find((task) => String(task.name || '').toLowerCase().includes('required mods restart'));
 }
 
 function renderAutomationDailyPanel() {
@@ -285,13 +285,13 @@ function renderAutomationDailyPanel() {
   const smartTask = smartAutomationTask();
   const preflight = state.preflight || {};
   const backupCount = Number(state.backups.length || health.backups?.length || 0);
-  const windowStart = state.env.PZ_MOD_REFRESH_WINDOW_START || '04:00';
-  const windowEnd = state.env.PZ_MOD_REFRESH_WINDOW_END || '05:00';
-  const nextTaskRun = smartTask?.nextRunTime ? new Date(smartTask.nextRunTime) : nextWindowStart(windowStart);
+  const checkMinutes = Number(state.env.PZ_MOD_CHECK_MINUTES || 10);
+  const restartMinutes = Number(state.env.PZ_MOD_RESTART_INTERVAL_MINUTES || 60);
+  const nextTaskRun = smartTask?.nextRunTime ? new Date(smartTask.nextRunTime) : null;
 
   const issues = [];
   if (!smartTask || !smartTask.enabled || smartTask.state === 'Disabled') {
-    issues.push('Enable Automation to schedule the nightly mod refresh task.');
+    issues.push('Enable Automation to check for required mod updates automatically.');
   }
   if (!preflight.ok) {
     issues.push('Mod preflight needs review before automation should touch Workshop files.');
@@ -309,12 +309,12 @@ function renderAutomationDailyPanel() {
   const enabled = Boolean(smartTask && smartTask.enabled && smartTask.state !== 'Disabled');
   const tone = !enabled ? 'info' : issues.length ? 'warning' : 'ok';
   panel.className = `automation-hero ${tone === 'ok' ? '' : tone}`.trim();
-  $('#automationDailyState').textContent = !enabled ? 'Not enabled' : issues.length ? 'Needs attention' : 'Green for nightly refresh';
+  $('#automationDailyState').textContent = !enabled ? 'Not enabled' : issues.length ? 'Needs attention' : 'Monitoring required mods';
   $('#automationDailyWhy').textContent = issues.length
     ? issues[0]
-    : 'Automation can attempt the 4 AM guarded mod refresh. Player count is checked again at run time before any restart.';
+    : `Checks every ${checkMinutes} minutes and restarts at most every ${restartMinutes} minutes when required mods change.`;
   $('#automationNextRun').textContent = enabled ? formatDate(nextTaskRun) : 'Not scheduled';
-  $('#automationWindow').textContent = `Window ${windowStart}-${windowEnd}`;
+  $('#automationWindow').textContent = `Check ${checkMinutes}m · Restart ${restartMinutes}m`;
 }
 
 function progressPercent(item) {
@@ -568,8 +568,8 @@ function renderSettings() {
     else input.value = valueFor(input.name);
   }
   $('#modWarningSeconds').value = state.env.PZ_MOD_WARNING_SECONDS || '60';
-  $('#modWindowStart').value = state.env.PZ_MOD_REFRESH_WINDOW_START || '04:00';
-  $('#modWindowEnd').value = state.env.PZ_MOD_REFRESH_WINDOW_END || '05:00';
+  $('#modCheckMinutes').value = state.env.PZ_MOD_CHECK_MINUTES || '10';
+  $('#modRestartMinutes').value = state.env.PZ_MOD_RESTART_INTERVAL_MINUTES || '60';
   $('#autoRefreshMods').checked = String(state.env.PZ_AUTO_REFRESH_MODS || 'false').toLowerCase() === 'true';
 }
 
@@ -811,7 +811,7 @@ function renderPendingMods(pendingMods, checkedCount) {
   $('#pendingModHelp').textContent = pendingMods.length > 0
     ? staged.stagedReady
       ? 'A staged server update is ready. Players may still need Steam to finish Workshop client updates before joining.'
-      : 'Stage these before the maintenance window, then apply a staged refresh when player traffic is low.'
+      : 'Required mod changes are staged while the server stays live, then applied on the configured restart cadence.'
     : checkedCount > 0
       ? 'No enabled Workshop updates were detected on the last check.'
       : 'Check Workshop metadata to detect pending updates before staging.';
@@ -1279,8 +1279,8 @@ function bindUi() {
         body: JSON.stringify({
           env: {
             PZ_MOD_WARNING_SECONDS: $('#modWarningSeconds').value,
-            PZ_MOD_REFRESH_WINDOW_START: $('#modWindowStart').value,
-            PZ_MOD_REFRESH_WINDOW_END: $('#modWindowEnd').value,
+            PZ_MOD_CHECK_MINUTES: $('#modCheckMinutes').value,
+            PZ_MOD_RESTART_INTERVAL_MINUTES: $('#modRestartMinutes').value,
             PZ_AUTO_REFRESH_MODS: String($('#autoRefreshMods').checked)
           }
         })

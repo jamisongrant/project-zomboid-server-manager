@@ -42,7 +42,7 @@ To include a weekly update window:
 To include a daily smart mod-refresh task:
 
 ```powershell
-.\scripts\tasks\Register-PzScheduledTasks.ps1 -IncludeSmartModRefresh
+.\scripts\tasks\Register-PzScheduledTasks.ps1
 ```
 
 Install firewall rules from an elevated PowerShell session:

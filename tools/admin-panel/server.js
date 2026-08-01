@@ -40,8 +40,8 @@ const envOrder = [
   'PZ_WATCHDOG_MIN_RESTART_SECONDS',
   'PZ_MOD_WARNING_SECONDS',
   'PZ_AUTO_REFRESH_MODS',
-  'PZ_MOD_REFRESH_WINDOW_START',
-  'PZ_MOD_REFRESH_WINDOW_END'
+  'PZ_MOD_CHECK_MINUTES',
+  'PZ_MOD_RESTART_INTERVAL_MINUTES'
 ];
 
 const editableIniKeys = [
@@ -83,13 +83,13 @@ const actions = {
   pruneLogs: ['internal:pruneLogs'],
   updateMods: ['scripts\\ops\\Update-PzMods.ps1'],
   refreshMods: ['scripts\\ops\\Invoke-PzStagedRefresh.ps1'],
-  smartRefreshMods: ['scripts\\ops\\Invoke-PzAutomationMaintenance.ps1'],
+  smartRefreshMods: ['scripts\\ops\\Invoke-PzRequiredModsRestart.ps1'],
   automationCheck: ['scripts\\ops\\Invoke-PzAutomationMaintenance.ps1', '-CheckOnly', '-IgnoreWindow'],
   prepareStagedUpdate: ['scripts\\ops\\Prepare-PzStagedUpdate.ps1'],
   stagedRefresh: ['scripts\\ops\\Invoke-PzStagedRefresh.ps1', '-SkipPrepare'],
   rollbackStagedUpdate: ['scripts\\ops\\Rollback-PzStagedUpdate.ps1', '-Restart'],
   installFirewallRules: ['scripts\\ops\\Install-PzFirewallRules.ps1'],
-  enableAutomation: ['scripts\\tasks\\Register-PzScheduledTasks.ps1', '-IncludeSmartModRefresh'],
+  enableAutomation: ['scripts\\tasks\\Register-PzScheduledTasks.ps1'],
   disableAutomation: ['scripts\\tasks\\Disable-PzAutomation.ps1']
 };
 
