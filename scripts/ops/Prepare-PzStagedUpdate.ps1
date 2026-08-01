@@ -61,9 +61,15 @@ try {
             }
 
             Write-PzLog -Config $config -Message "Pre-downloading Workshop item ${workshopId} for app $($config.WorkshopAppId)." -Name 'staged-update'
-            & $steamCmd +login anonymous +workshop_download_item $config.WorkshopAppId $workshopId validate +quit
+            # Keep Workshop content inside the candidate. Without this install root,
+            # Project Zomboid downloads mods during boot and readiness can time out.
+            & $steamCmd +force_install_dir $stageServerDir +login anonymous +workshop_download_item $config.WorkshopAppId $workshopId validate +quit
             if ($LASTEXITCODE -ne 0) {
                 throw "SteamCMD returned exit code ${LASTEXITCODE} while staging Workshop item ${workshopId}."
+            }
+            $workshopPath = Join-Path $stageServerDir (Join-Path 'steamapps\workshop\content' (Join-Path $config.WorkshopAppId $workshopId))
+            if (-not (Test-Path -LiteralPath $workshopPath -PathType Container)) {
+                throw "Workshop item ${workshopId} was not installed in the staged server directory: ${workshopPath}."
             }
             $completed += 1
         }

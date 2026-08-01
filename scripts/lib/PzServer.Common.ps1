@@ -75,7 +75,7 @@ function Get-PzConfig {
         AutoRefreshMods = [bool]::Parse((ValueOrDefault $envValues 'PZ_AUTO_REFRESH_MODS' 'false'))
         ModCheckMinutes = [int](ValueOrDefault $envValues 'PZ_MOD_CHECK_MINUTES' '10')
         ModRestartIntervalMinutes = [int](ValueOrDefault $envValues 'PZ_MOD_RESTART_INTERVAL_MINUTES' '60')
-        StartupTimeoutSeconds = [int](ValueOrDefault $envValues 'PZ_STARTUP_TIMEOUT_SECONDS' '300')
+        StartupTimeoutSeconds = [int](ValueOrDefault $envValues 'PZ_STARTUP_TIMEOUT_SECONDS' '900')
         StartupPollSeconds = [int](ValueOrDefault $envValues 'PZ_STARTUP_POLL_SECONDS' '5')
     }
 

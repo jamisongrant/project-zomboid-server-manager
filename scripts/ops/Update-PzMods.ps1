@@ -51,7 +51,7 @@ try {
         }
 
         Write-PzLog -Config $config -Message "Updating Workshop item ${workshopId} for app $($config.WorkshopAppId)." -Name 'mods'
-        & $steamCmd +login anonymous +workshop_download_item $config.WorkshopAppId $workshopId validate +quit
+        & $steamCmd +force_install_dir $config.ServerDir +login anonymous +workshop_download_item $config.WorkshopAppId $workshopId validate +quit
         if ($LASTEXITCODE -ne 0) {
             throw "SteamCMD returned exit code ${LASTEXITCODE} while updating Workshop item ${workshopId}."
         }

@@ -239,6 +239,14 @@ Add-Check 'Mod and staged workflows publish progress state' {
             throw "Staged preparation must publish $required."
         }
     }
+    foreach ($required in @('+force_install_dir $stageServerDir', 'Workshop item', 'steamapps\workshop\content')) {
+        if ($prepareStaged -notmatch [regex]::Escape($required)) {
+            throw "Staged preparation must isolate Workshop content in the candidate directory with $required."
+        }
+    }
+    if ($updateMods -notmatch '\+force_install_dir \$config\.ServerDir') {
+        throw 'Live mod updates must install Workshop content into the active server directory.'
+    }
     foreach ($required in @('Write-StagedRefreshProgress', 'warning-players', 'stopping-server', 'swapping', 'health-check', 'rolling-back')) {
         if ($stagedRefresh -notmatch [regex]::Escape($required)) {
             throw "Staged refresh must publish $required."
