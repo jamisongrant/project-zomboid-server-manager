@@ -1268,6 +1268,10 @@ function bindUi() {
 
   $('#saveSettingsBtn').addEventListener('click', async () => {
     try {
+      const restartMinutes = Number($('#modRestartMinutes').value || 60);
+      if (!Number.isInteger(restartMinutes) || restartMinutes < 1 || restartMinutes > 1440) {
+        throw new Error('Minimum restart interval must be a whole number from 1 to 1440 minutes.');
+      }
       const result = await api('/api/settings', {
         method: 'POST',
         body: JSON.stringify({ settings: collectSettings() })
@@ -1280,7 +1284,7 @@ function bindUi() {
           env: {
             PZ_MOD_WARNING_SECONDS: $('#modWarningSeconds').value,
             PZ_MOD_CHECK_MINUTES: $('#modCheckMinutes').value,
-            PZ_MOD_RESTART_INTERVAL_MINUTES: $('#modRestartMinutes').value,
+            PZ_MOD_RESTART_INTERVAL_MINUTES: String(restartMinutes),
             PZ_AUTO_REFRESH_MODS: String($('#autoRefreshMods').checked)
           }
         })

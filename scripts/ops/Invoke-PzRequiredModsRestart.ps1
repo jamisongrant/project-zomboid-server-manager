@@ -5,6 +5,9 @@ $ErrorActionPreference = 'Stop'
 
 $config = Get-PzConfig
 Initialize-PzDirectories -Config $config
+if ($config.ModRestartIntervalMinutes -lt 1 -or $config.ModRestartIntervalMinutes -gt 1440) {
+    throw 'PZ_MOD_RESTART_INTERVAL_MINUTES must be between 1 and 1440.'
+}
 $stateName = 'required-mods-restart.json'
 $statePath = Join-Path $config.StateDir $stateName
 $contentRoot = Join-Path $config.SteamCmdDir "steamapps\workshop\content\$($config.WorkshopAppId)"
