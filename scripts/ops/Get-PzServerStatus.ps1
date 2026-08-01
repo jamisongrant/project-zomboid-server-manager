@@ -10,7 +10,8 @@ $maintenance = Test-PzMaintenance -Config $config
 $portsBound = $false
 if ($null -ne $process) {
     $boundPorts = @(Get-NetUDPEndpoint -ErrorAction SilentlyContinue | Where-Object { $_.OwningProcess -eq $process.Id -and $_.LocalPort -in @($config.Port, $config.UdpPort) })
-    $portsBound = @($boundPorts | Where-Object { $_.LocalPort -eq $config.Port }).Count -gt 0
+    $portsBound = @($boundPorts | Where-Object { $_.LocalPort -eq $config.Port }).Count -gt 0 -and
+        @($boundPorts | Where-Object { $_.LocalPort -eq $config.UdpPort }).Count -gt 0
 }
 
 if ($null -eq $process) {

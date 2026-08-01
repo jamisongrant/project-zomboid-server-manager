@@ -216,6 +216,9 @@ Add-Check 'Mod and staged workflows publish progress state' {
     $updateMods = Get-Content -LiteralPath (Join-Path $projectRoot 'scripts/ops/Update-PzMods.ps1') -Raw
     $prepareStaged = Get-Content -LiteralPath (Join-Path $projectRoot 'scripts/ops/Prepare-PzStagedUpdate.ps1') -Raw
     $stagedRefresh = Get-Content -LiteralPath (Join-Path $projectRoot 'scripts/ops/Invoke-PzStagedRefresh.ps1') -Raw
+    $requiredMods = Get-Content -LiteralPath (Join-Path $projectRoot 'scripts/ops/Invoke-PzRequiredModsRestart.ps1') -Raw
+    $serverStatus = Get-Content -LiteralPath (Join-Path $projectRoot 'scripts/ops/Get-PzServerStatus.ps1') -Raw
+    $saveBackup = Get-Content -LiteralPath (Join-Path $projectRoot 'scripts/ops/Backup-PzSaves.ps1') -Raw
     $restoreBackup = Get-Content -LiteralPath (Join-Path $projectRoot 'scripts/ops/Restore-PzBackup.ps1') -Raw
     $automationMaintenance = Get-Content -LiteralPath (Join-Path $projectRoot 'scripts/ops/Invoke-PzAutomationMaintenance.ps1') -Raw
     $scheduledTasks = Get-Content -LiteralPath (Join-Path $projectRoot 'scripts/tasks/Register-PzScheduledTasks.ps1') -Raw
@@ -240,6 +243,24 @@ Add-Check 'Mod and staged workflows publish progress state' {
         if ($stagedRefresh -notmatch [regex]::Escape($required)) {
             throw "Staged refresh must publish $required."
         }
+    }
+    foreach ($required in @('StartupTimeoutSeconds', 'StartupPollSeconds', 'Get-NetUDPEndpoint', 'Server did not bind game ports', 'rolling-back-start')) {
+        if ($stagedRefresh -notmatch [regex]::Escape($required)) {
+            throw "Staged refresh must verify real server readiness with $required."
+        }
+    }
+    foreach ($required in @('Get-WorkshopMetadataFingerprint', 'metadataFingerprint', 'skipped SteamCMD staging')) {
+        if ($requiredMods -notmatch [regex]::Escape($required)) {
+            throw "Required-mods automation must include $required."
+        }
+    }
+    foreach ($required in @('DeferCompression', 'CompressSnapshotPath', 'CompressDestinationPath', 'pending-pz-saves')) {
+        if ($saveBackup -notmatch [regex]::Escape($required)) {
+            throw "Save backup workflow must include $required."
+        }
+    }
+    if ($serverStatus -notmatch "LocalPort -eq \`$config.UdpPort") {
+        throw 'Server status must require both game UDP ports before reporting Ready.'
     }
     foreach ($required in @('restore-progress.json', 'Write-RestoreProgress', 'pre-restore-backup', 'extracting', 'moving-saves', 'starting-server')) {
         if ($restoreBackup -notmatch [regex]::Escape($required)) {

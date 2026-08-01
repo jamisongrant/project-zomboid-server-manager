@@ -47,14 +47,29 @@ function Write-StagedRefreshProgress {
 
 function Start-StagedServerWithRetry {
     param([int]$Attempts = 2)
+    $timeoutSeconds = [int]$config.StartupTimeoutSeconds
+    $pollSeconds = [int]$config.StartupPollSeconds
     for ($attempt = 1; $attempt -le $Attempts; $attempt += 1) {
         try {
             & (Join-Path $PSScriptRoot 'Start-PzServer.ps1')
-            Start-Sleep -Seconds 15
-            if ($null -eq (Get-PzServerProcess -Config $config)) {
-                throw 'Server process was not present after startup verification.'
+            $elapsed = 0
+            while ($elapsed -lt $timeoutSeconds) {
+                $process = Get-PzServerProcess -Config $config
+                if ($null -eq $process) {
+                    throw 'Server process exited during startup.'
+                }
+                $ports = @(Get-NetUDPEndpoint -ErrorAction SilentlyContinue | Where-Object {
+                    $_.OwningProcess -eq $process.Id -and $_.LocalPort -in @($config.Port, $config.UdpPort)
+                } | Select-Object -ExpandProperty LocalPort -Unique)
+                if ($ports -contains $config.Port -and $ports -contains $config.UdpPort) {
+                    Write-PzLog -Config $config -Message "Server readiness verified: game ports $($config.Port) and $($config.UdpPort) are listening." -Name 'staged-update'
+                    return
+                }
+                Write-StagedRefreshProgress -Phase 'starting-server' -Status "Server process is running; waiting for game ports ($elapsed/${timeoutSeconds}s)."
+                Start-Sleep -Seconds $pollSeconds
+                $elapsed += $pollSeconds
             }
-            return
+            throw "Server did not bind game ports $($config.Port) and $($config.UdpPort) within ${timeoutSeconds} seconds."
         } catch {
             if ($attempt -ge $Attempts) { throw }
             Write-PzLog -Config $config -Message "Server start attempt ${attempt} failed; retrying once. $($_.Exception.Message)" -Name 'staged-update' -Level 'WARN'
@@ -88,7 +103,7 @@ try {
     }
 
     Write-StagedRefreshProgress -Phase 'backup' -Status 'Backing up saves before staged swap.'
-    & (Join-Path $PSScriptRoot 'Backup-PzSaves.ps1')
+    & (Join-Path $PSScriptRoot 'Backup-PzSaves.ps1') -DeferCompression
 
     if (Test-Path -LiteralPath $rollbackServerDir) {
         Remove-Item -LiteralPath $rollbackServerDir -Recurse -Force
@@ -124,7 +139,8 @@ try {
             Move-Item -LiteralPath $rollbackServerDir -Destination $config.ServerDir
         }
         if ($wasRunning) {
-            & (Join-Path $PSScriptRoot 'Start-PzServer.ps1')
+            Write-StagedRefreshProgress -Phase 'rolling-back-start' -Status 'Starting the rollback server and verifying game ports.'
+            Start-StagedServerWithRetry
         }
         Write-StagedRefreshProgress -Phase 'failed' -Status 'Staged refresh failed and rollback was attempted.' -RestartRecommended $true -RestartReason 'Verify the server recovered after rollback. Restart manually only if the server is not running.' -LastError $_.Exception.Message
         throw
